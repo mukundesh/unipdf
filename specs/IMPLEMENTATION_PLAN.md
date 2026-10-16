@@ -200,7 +200,15 @@ REQUIREMENTS Draft 5 (*[M2]*):
 
 Exit: parity gate green on the whole corpus; `unipdf text` usable.
 
-### M3 — Provenance and geometry (L)
+### M3 — Provenance and geometry (L) — **done 2026-10-16**
+
+Outcome: abhishek adapter (every in-scope converter now has piece-level
+provenance); akshara clusters on every word; `unipdf show` (HTML with hover
+details, or PNG); `test_geometry.py`: UP-VF-5 invariants on all 24 PDFs and
+45 hand-checked words (UP-VF-6). Overlays reviewed for Sakal, DVOT-Surekh,
+Nirmala UI (Word export, ActualText), Mangal (Google Docs), Arial Unicode
+MS. HTML instead of pillow: the browser shapes Devanagari labels; PNG via
+PyMuPDF's own drawing, so `pillow` is not needed.
 
 *After M2: steps 1 and 3 and the word half of step 4 are done (M2 outcome).*
 
@@ -222,7 +230,13 @@ Exit: parity gate green on the whole corpus; `unipdf text` usable.
 
 Exit: UP-VF-2, -5, -6 green; overlays reviewed for 3 fonts.
 
-### M4 — Font records and attributes (M)
+### M4 — Font records and attributes (M) — **done 2026-10-16**
+
+Outcome: `pdf/fonts.py` (programs per font name, read before repair,
+fontTools names/OS2/head/post, descriptor), `attributes.py` (glyph, font
+run, word), `unipdf fonts`. UP-VF-7: 30 hand-labelled words. Corpus gained
+`c024` (Times New Roman,Italic beside Sakal), the only italic case. Rules
+recorded in REQUIREMENTS UP-AT-2/3 *[M4]*. 397 tests green.
 
 1. `pdf/fonts.py`: font record (UP-FN-1) — PDF name/type/encoding/embedded/
    ToUnicode from `get_fonts(full=True)` and the font dict; font program via

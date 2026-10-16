@@ -1,6 +1,6 @@
 # unipdf — Requirements
 
-Status: **Draft 5** (2026-10-16) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17); M1, M2 done, amendments marked *[M1]*, *[M2]*; OQ-9 decided (D-18).
+Status: **Draft 5** (2026-10-16) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17); M1–M4 done, amendments marked *[M1]*–*[M4]*; OQ-9 decided (D-18).
 
 unipdf reads Hindi and Marathi text out of PDFs as correct Unicode **and** says
 where every word sits on the page and how it is set (size, bold, italic). It is
@@ -266,6 +266,11 @@ Requirement IDs are stable; tests reference them.
   keyed by base name. A record lists every xref of that name, and metadata
   that differs between them is reported, not guessed. Converters need only the
   name, as in R, so text is unaffected.
+  *[M4]* Implemented as `Font.programs`: a span's font name equals the PDF
+  BaseFont without its subset prefix on the whole corpus. Fonts used only in
+  annotation or signature appearances (Helvetica, MyriadPro) have no page font
+  object, so their record has no programs and evidence comes from the name.
+  Records are read before repair, so `has_tounicode` describes the PDF.
 
 ### 5.5 Run assembly and conversion
 
@@ -313,6 +318,9 @@ with glyphs. To give boxes for converted text, unipdf tracks provenance.
   run-level (out of scope, D-6).
   A converter that cannot provide a map declares so, and its runs fall back to
   run-level provenance (UP-AL-5).
+  *[M3]* abhishek done: SPACER tokens are dropped, and a dropped second copy
+  gives its sources to the copy kept. Every in-scope converter now has
+  piece-level provenance.
 - **UP-AL-3** Provenance mode must not change converted text: for every input,
   `to_unicode(s) == to_unicode_with_provenance(s).text`. Verified over the
   whole `testdata/` and the PDF corpus.
@@ -325,6 +333,11 @@ with glyphs. To give boxes for converted text, unipdf tracks provenance.
   - **per-character** boxes are not promised: a matra or halant can have no
     glyph of its own.
   Each box states which level it is.
+  *[M3]* A cluster is an akshara of the converted word: a consonant with the
+  consonants virama joins to it and its signs, or an independent vowel with
+  its signs; any other character is its own. Its glyphs are the union of its
+  characters' provenance. `Word.clusters` is None where a run has only
+  run-level provenance.
 - **UP-AL-6** Words are formed **after** conversion: the converted run text
   is split on whitespace, and each word's glyph set is the union of its
   characters' provenance. Converting word by word is not allowed (it changes
@@ -395,8 +408,19 @@ is what R does), so layout has two levels.
   passes (UP-EX-3), with line width (*[M0]* Word's synthetic bold is a
   stroke of `size / 35`). *[M0]* MuPDF's `char_flags` bit 8 is **not**
   evidence: it is set exactly when the font name is bold.
+  *[M4]* Rules: font evidence carried by every program of the name decides;
+  evidence only some carry is listed as "(k of n programs)" and does not.
+  Glyph evidence makes a font run bold when at least half of its glyphs carry
+  it, otherwise it is listed as "(k of n glyphs)". A stroke thinner than
+  0.01 em is `thin_stroke` and not bold. Strings: `font_name_bold_keyword`,
+  `pdf_descriptor_font_weight_N`, `os2_us_weight_class_N`,
+  `os2_fs_selection_bold`, `fill_then_stroke(w em)`, `render_mode_1|2`,
+  `overprinted`.
 - **UP-AT-3** Italic: font name contains italic/oblique, or descriptor
   `ItalicAngle` ≠ 0, or OS/2/head italic bits; evidence recorded.
+  *[M4]* Also descriptor flag 64 and the `post` table angle. Word's synthetic
+  italic (a sheared text matrix) is not detected: neither `rawdict` nor
+  `texttrace` exposes the shear.
 - **UP-AT-4** A word whose glyphs disagree on an attribute reports it per font
   run (cidpdf's `font_runs`) and a word-level value (bold if any run is bold —
   cidpdf's rule; size by majority).
@@ -538,10 +562,25 @@ joined with `\n`, blocks with `\n\n`. (This is `read_pdf.py` with its
 - **UP-VF-5** Invariants on every corpus page: every word bbox lies inside the
   page; every non-synthetic glyph belongs to exactly one word; a word's bbox is
   the union of its glyphs' boxes; cluster boxes lie inside their word box.
+  *[M3]* "Inside the page": every glyph origin is on the page, and a word box
+  overhangs it by less than its font size. D-14 boxes run ascender to
+  descender, so a line at the very top edge (Lohit PDF) starts 4.9 pt above
+  the page.
 - **UP-VF-6** A hand-checked set (~50 words across fonts, incl. reph,
   matra-i and conjunct cases) with expected word and cluster boxes.
+  *[M3]* 45 words (`tests/hand/words.yaml`): sakal 18 (6 with nukta),
+  dvotsurekh 8, nirmalaui_glyphs 6, mangal_glyphs 5, Word Nirmala UI 6,
+  arialuni_glyphs 2 (all the Devanagari it draws in the corpus). The boxes were
+  drawn at 5× and checked by eye. The expected values are unipdf's boxes as
+  checked, not independent measurements.
 - **UP-VF-7** Bold/italic labels checked on a small hand-labelled set covering
   each evidence type (bold font, stroke render mode, over-print).
+  *[M4]* 30 words (`tests/hand/attributes.yaml`), labelled by eye from their
+  ink without boxes: bold face 10, Word synthetic bold 4, italic 4, plain 12.
+  No corpus PDF over-prints (the M0 survey's candidate is two glyphs mapped
+  to `य`, which MuPDF merges), so over-print is tested on hand-made glyphs. A
+  regular Nirmala UI that looks heavy at small size was left out as not
+  decidable by eye.
 
 ---
 
@@ -552,6 +591,9 @@ joined with `\n`, blocks with `\n\n`. (This is `read_pdf.py` with its
 - **UP-NF-2** Deterministic: same input and options → byte-identical output.
 - **UP-NF-3** Performance: `unipdf text` within 1.5× of R on the corpus;
   provenance/geometry adds at most 2× over `unipdf text`.
+  *[M4]* There is one pipeline, so `unipdf text` already pays for geometry and
+  attributes: 1.50× R over the 24 corpus PDFs (M2: 1.38×). Half of both is
+  `FontConv()`, built per document by R and by unipdf.
 - **UP-NF-4** Memory proportional to one page plus document fonts; pages are
   processed one at a time.
 - **UP-NF-5** Packaging: one `uv`-managed project at `Try/indic2unicode/unipdf/`
