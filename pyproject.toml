@@ -41,4 +41,4 @@ markers = [
 [tool.ruff]
 line-length = 100
 # the absorbed indic2unicode code is kept as upstream wrote it (D-16)
-extend-exclude = ["src/unipdf/i2u", "spikes"]
+extend-exclude = ["src/unipdf/i2u", "spikes", "tools/retired"]

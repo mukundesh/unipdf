@@ -1,17 +1,34 @@
-"""unipdf command line.
+"""unipdf command line (UP-CLI-1..3).
 
 `unipdf text` gives the text as visual rows with split words joined.
+`unipdf words` / `glyphs` give one row per word / glyph; `json` the model.
 `unipdf show` draws word and akshara boxes over the page images.
 `--rawdict-lines --no-join --convert-actual-text` gives R's text byte for byte
 (UP-VF-4a).
+
+The words and glyphs tables number pages, lines, words and glyphs from 1, as
+`-p` does; the JSON model numbers from 0. Text that would be missing from the
+output is summarised on stderr (UP-CLI-2). Exit status: 0, with or without
+warnings; 1 when the input cannot be read or an option is wrong; 2 for usage
+errors (argparse).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import sys
+from collections import defaultdict
+
+from unipdf.issues import (
+    CONVERTER_ERROR,
+    EXTRACTION_MISMATCH,
+    NO_CONVERTER,
+    REPAIR_FAILED,
+    UNCONVERTED_CHAR,
+)
 
 
 def parse_page_range(spec: str, page_count: int) -> list[int]:
@@ -80,9 +97,126 @@ def read(args):
     )
 
 
-def cmd_text(args) -> int:
-    write_output(read(args).text(), args.output)
-    return 0
+# ---- missing text on stderr (UP-CLI-2)
+
+
+def summary(doc) -> list[str]:
+    """one line per kind of problem that leaves text missing or unconverted"""
+    by_code = defaultdict(list)
+    for issue in doc.issues:
+        by_code[issue.code].append(issue)
+    lines = [f"{i.message} ({NO_CONVERTER})" for i in by_code[NO_CONVERTER]]
+    for code, what in (
+        (UNCONVERTED_CHAR, "characters had no token in their converter and are missing"),
+        (CONVERTER_ERROR, "runs failed to convert and are left as in the PDF"),
+    ):
+        found = by_code[code]
+        if found:
+            fonts = ", ".join(sorted({i.font for i in found if i.font}))
+            lines.append(f"{len(found)} {what} ({code})" + (f": {fonts}" if fonts else ""))
+    lines.extend(f"{i.message} ({REPAIR_FAILED})" for i in by_code[REPAIR_FAILED])
+    if by_code[EXTRACTION_MISMATCH]:
+        pages = ", ".join(str(i.page + 1) for i in by_code[EXTRACTION_MISMATCH])
+        lines.append(f"ActualText could not be matched to glyphs on page(s) {pages} "
+                     f"({EXTRACTION_MISMATCH})")
+    return lines
+
+
+def report(doc) -> None:
+    for line in summary(doc):
+        print(f"unipdf: warning: {line}", file=sys.stderr)
+
+
+# ---- tables
+
+
+_ESCAPES = {"\\": "\\\\", "\t": "\\t", "\n": "\\n", "\r": "\\r"}
+
+
+def cell(v) -> str:
+    """a TSV cell: tabs, newlines, backslashes and control characters escaped"""
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "1" if v else "0"
+    if isinstance(v, float):
+        return f"{round(v, 2):g}"
+    if isinstance(v, list | tuple):
+        return " ".join(cell(x) for x in v)
+    return "".join(_ESCAPES.get(c) or (f"\\x{ord(c):02x}" if ord(c) < 0x20 or ord(c) == 0x7F
+                                       else c) for c in str(v))
+
+
+def _box(b):
+    return None if b is None else [round(v, 2) for v in b]
+
+
+def word_records(doc) -> list[dict]:
+    """UP-CLI-1 `words`: one record per word, numbered from 1"""
+    out = []
+    for page in doc.pages:
+        for w in page.words:
+            out.append({
+                "page": page.index + 1, "line": w.line + 1, "word": w.index + 1,
+                "bbox": _box(w.bbox), "fonts": w.fonts,
+                "size": None if w.size is None else round(w.size, 2),
+                "bold": w.bold, "italic": w.italic, "text": w.text, "raw_text": w.raw_text,
+                "glyphs": [g + 1 for g in w.glyphs], "glyph_ids": w.glyph_ids,
+                "joined_from": w.joined_from,
+            })
+    return out
+
+
+def glyph_records(doc) -> list[dict]:
+    """UP-CLI-1 `glyphs`: one record per glyph, numbered from 1"""
+    out = []
+    for page in doc.pages:
+        word_of = {gi: w.index for w in page.words for gi in w.glyphs}
+        for g in page.glyphs:
+            flags = [name for name, on in (("synthetic", g.synthetic),
+                                           ("actual_text", g.actual_text),
+                                           ("unattributed", g.unattributed),
+                                           ("invisible", g.invisible)) if on]
+            flags += [f"repeat_{r}" for r in g.repeats]
+            word = word_of.get(g.index)
+            out.append({
+                "page": page.index + 1, "glyph": g.index + 1,
+                "word": None if word is None else word + 1,
+                "font": g.font, "size": round(g.size, 2), "bbox": _box(g.bbox),
+                "origin": [round(v, 2) for v in g.origin],
+                "glyph_id": g.actual_text_glyph_ids if g.actual_text else g.glyph_id,
+                "render_mode": g.render_mode,
+                "line_width": None if g.line_width is None else round(g.line_width, 3),
+                "flags": flags, "raw_text": g.text,
+            })
+    return out
+
+
+def _tsv(columns: list[str], rows: list[list]) -> str:
+    return "\n".join(["\t".join(columns), *("\t".join(cell(v) for v in r) for r in rows)])
+
+
+def words_tsv(records: list[dict]) -> str:
+    cols = ["page", "line", "word", "x0", "y0", "x1", "y1", "font", "size", "bold", "italic",
+            "text", "raw_text"]
+    return _tsv(cols, [[r["page"], r["line"], r["word"], *(r["bbox"] or [None] * 4),
+                        "; ".join(r["fonts"]), r["size"], r["bold"], r["italic"], r["text"],
+                        r["raw_text"]] for r in records])
+
+
+def glyphs_tsv(records: list[dict]) -> str:
+    cols = ["page", "glyph", "word", "font", "size", "x0", "y0", "x1", "y1", "origin_x",
+            "origin_y", "glyph_id", "render_mode", "line_width", "flags", "raw_text"]
+    return _tsv(cols, [[r["page"], r["glyph"], r["word"], r["font"], r["size"], *r["bbox"],
+                        *r["origin"], r["glyph_id"], r["render_mode"], r["line_width"],
+                        ",".join(r["flags"]), r["raw_text"]] for r in records])
+
+
+def json_records(records: list[dict]) -> str:
+    """a JSON array, one record per line"""
+    if not records:
+        return "[]"
+    return "[\n" + ",\n".join(json.dumps(r, ensure_ascii=False) for r in records) + "\n]"
 
 
 def fonts_table(doc) -> str:
@@ -101,6 +235,41 @@ def fonts_table(doc) -> str:
     return "\n".join(rows)
 
 
+# ---- commands
+
+
+def cmd_text(args) -> int:
+    doc = read(args)
+    report(doc)
+    write_output(doc.text(), args.output)
+    return 0
+
+
+def cmd_words(args) -> int:
+    doc = read(args)
+    report(doc)
+    records = word_records(doc)
+    write_output(json_records(records) if args.format == "json" else words_tsv(records),
+                 args.output)
+    return 0
+
+
+def cmd_glyphs(args) -> int:
+    doc = read(args)
+    report(doc)
+    records = glyph_records(doc)
+    write_output(json_records(records) if args.format == "json" else glyphs_tsv(records),
+                 args.output)
+    return 0
+
+
+def cmd_json(args) -> int:
+    doc = read(args)
+    report(doc)
+    write_output(doc.to_json(indent=args.indent), args.output)
+    return 0
+
+
 def cmd_fonts(args) -> int:
     write_output(fonts_table(read(args)), args.output)
     return 0
@@ -113,6 +282,7 @@ def cmd_show(args) -> int:
 
     out = args.output or str(Path(args.pdf).with_suffix(".show.html").name)
     doc = read(args)
+    report(doc)
     if out.lower().endswith(".png"):
         written = show.write_png(doc, args.pdf, out, zoom=args.zoom or 2.0,
                                  clusters=args.clusters)
@@ -124,9 +294,11 @@ def cmd_show(args) -> int:
     return 0
 
 
-def add_common(p: argparse.ArgumentParser) -> None:
+def add_common(p: argparse.ArgumentParser, output_help: str = "output file (default: stdout)"
+               ) -> None:
     p.add_argument("pdf")
     p.add_argument("-p", "--pages", help="pages, e.g. '1', '1-5', '1,3,7-10'")
+    p.add_argument("-o", "--output", help=output_help)
     p.add_argument("--no-repair", action="store_true", help="do not repair ToUnicode maps")
     p.add_argument("--font", help="use this converter for every font")
     p.add_argument("--font-map", action="append", metavar="FONT=CONVERTER",
@@ -139,28 +311,47 @@ def add_common(p: argparse.ArgumentParser) -> None:
                         "font size (off by default; e.g. 0.15)")
     p.add_argument("--convert-actual-text", action="store_true",
                    help="run converters over /ActualText too, as R does (D-18)")
+    p.add_argument("-v", "--verbose", action="store_true", default=argparse.SUPPRESS,
+                   help="log converter and repair messages")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="unipdf", description="Hindi and Marathi text from PDFs as Unicode")
+    ap = argparse.ArgumentParser(
+        prog="unipdf", description="Hindi and Marathi text from PDFs as Unicode",
+        epilog="Exit status: 0 on success, also when text is missing (see the warnings on "
+               "stderr); 1 when the PDF cannot be read or an option value is wrong.")
     ap.add_argument("-v", "--verbose", action="store_true", help="log converter and repair messages")
     sub = ap.add_subparsers(dest="command", required=True)
 
     t = sub.add_parser("text", help="the Unicode text of a PDF")
     add_common(t)
-    t.add_argument("-o", "--output", help="output file (default: stdout)")
     t.set_defaults(fn=cmd_text)
+
+    w = sub.add_parser("words", help="one row per word: page, line, word, box, font, size, "
+                                     "bold, italic, text, raw text")
+    add_common(w)
+    w.add_argument("--format", choices=["tsv", "json"], default="tsv",
+                   help="tab-separated (default) or a JSON array with glyph ids")
+    w.set_defaults(fn=cmd_words)
+
+    g = sub.add_parser("glyphs", help="one row per glyph: box, origin, glyph id, raw text")
+    add_common(g)
+    g.add_argument("--format", choices=["tsv", "json"], default="tsv",
+                   help="tab-separated (default) or a JSON array")
+    g.set_defaults(fn=cmd_glyphs)
+
+    j = sub.add_parser("json", help="the whole document model as JSON (specs/JSON_SCHEMA.md)")
+    add_common(j)
+    j.add_argument("--indent", type=int, help="indent the JSON by this many spaces")
+    j.set_defaults(fn=cmd_json)
 
     f = sub.add_parser("fonts", help="font table: converter, resolution rule, bold, italic")
     add_common(f)
-    f.add_argument("-o", "--output", help="output file (default: stdout)")
     f.set_defaults(fn=cmd_fonts)
 
     s = sub.add_parser("show", help="page images with word boxes, to check geometry")
-    add_common(s)
-    s.add_argument("-o", "--output",
-                   help="output .html (default: <pdf name>.show.html here) or .png "
-                        "(one per page: name-<page>.png)")
+    add_common(s, output_help="output .html (default: <pdf name>.show.html here) or .png "
+                              "(one per page: name-<page>.png)")
     s.add_argument("--clusters", action=argparse.BooleanOptionalAction, default=True,
                    help="draw akshara boxes too (default: yes)")
     s.add_argument("--zoom", type=float, help="image scale (default 1.5 for HTML, 2 for PNG)")
@@ -169,6 +360,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    import pymupdf
+
+    from unipdf.pipeline import PasswordRequired
+
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO if args.verbose else logging.CRITICAL,
                         format="%(name)s: %(levelname)s %(message)s")
@@ -177,6 +372,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     try:
         return args.fn(args)
+    except PasswordRequired:
+        print(f"unipdf: {args.pdf} is encrypted and needs a password", file=sys.stderr)
+        return 1
+    except pymupdf.FileDataError as e:
+        print(f"unipdf: cannot read {args.pdf} as a PDF: {e}", file=sys.stderr)
+        return 1
     except ValueError as e:
         print(f"unipdf: {e}", file=sys.stderr)
         return 1

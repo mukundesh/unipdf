@@ -251,7 +251,18 @@ recorded in REQUIREMENTS UP-AT-2/3 *[M4]*. 397 tests green.
 
 Exit: UP-VF-7 green; `unipdf fonts` shows converter + resolution rule.
 
-### M5 — CLI, JSON, docs, retirement (S–M)
+### M5 — CLI, JSON, docs, retirement (S–M) — **done 2026-10-16**
+
+Outcome: `unipdf words` / `glyphs` (TSV or JSON) / `json`; `-o`, `-v` on
+every command; stderr summary with the new `no_converter` warning
+(REQUIREMENTS UP-CLI-2 *[M5]*); exit codes 0/1/2. `specs/JSON_SCHEMA.md`,
+pinned to the output by `tests/test_json.py`. UP-API-2 string API
+(`unipdf.convert`, `convert_with_provenance`, `converter_names`). README
+rewritten. `../read_pdf.py` and `../read_pdf_cidpdf.py` replaced by notes;
+their last versions are in `tools/retired/`. Finding: `--font-map
+DVB-TTYogesh=yogesh` converts most of c011 but not the glyphs Word put in the
+`DVB-TTYogesh+1` font object, which is the input-adapter work of D-17/OQ-8.
+
 
 1. `unipdf words` (TSV/JSON), `glyphs`, `json`, `fonts` (UP-CLI-1);
    stderr summary of missing conversions (UP-CLI-2); exit codes.
@@ -310,6 +321,8 @@ it.
 | `test_geometry.py` | UP-VF-5, -6 | M3 |
 | `test_attributes.py` | UP-AT, UP-VF-7 | M4 |
 | `test_cli.py` | UP-CLI-* | M5 |
+| `test_json.py` | UP-MD-1, -2 (JSON_SCHEMA.md) | M5 |
+| `test_strings.py` | UP-API-2 | M5 |
 
 ## 5. Order and parallelism
 

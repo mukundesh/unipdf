@@ -19,19 +19,32 @@ from collections.abc import Mapping
 
 from unipdf.convert.provenance import provenance_level, tracked_to_unicode
 from unipdf.convert.resolve import (
+    RULE_NONE,
     RULE_REPAIRED,
     SOUND_MAP,
     ConverterResolver,
     Resolution,
+    is_glyphs_converter,
     strip_subset,
 )
+from unipdf.i2u.fix_tounicode import font_lookup_key
 from unipdf.i2u.fontconv import FontConv
-from unipdf.issues import CONVERTER_ERROR, PROVENANCE_UNAVAILABLE, UNCONVERTED_CHAR, IssueBag
+from unipdf.issues import (
+    CONVERTER_ERROR,
+    NO_CONVERTER,
+    PROVENANCE_UNAVAILABLE,
+    UNCONVERTED_CHAR,
+    IssueBag,
+)
 from unipdf.model import Font, Glyph, Run
 from unipdf.pdf.fonts import FontProgram, combine, name_evidence
 from unipdf.pdf.glyphs import RawLine
 
 BYPASS, CONVERT = "bypass", "convert"
+
+# share of a font's characters in legacy ranges above which a font with no
+# converter is reported (UP-CLI-2)
+LEGACY_SHARE = 0.2
 
 
 class Converters:
@@ -196,3 +209,46 @@ def convert_line(
                 glyphs[gi].unattributed = True
         runs.append(run)
     return runs
+
+
+def _legacy_char(c: str) -> bool:
+    """where 8-bit Devanagari fonts put their glyphs: Latin-1, private use,
+    control characters"""
+    o = ord(c)
+    return 0x80 <= o <= 0xFF or 0xE000 <= o <= 0xF8FF or (o < 0x20 and c not in "\t\n\r")
+
+
+def _suggest(convs: Converters, font: str) -> str | None:
+    """the longest converter name inside the font's name (DVB-TTYogesh -> yogesh)"""
+    key = font_lookup_key(strip_subset(font))
+    found = [n for n in convs.fontconv.converters
+             if not is_glyphs_converter(n) and len(n) >= 4 and font_lookup_key(n) in key]
+    return max(found, key=lambda n: (len(n), n), default=None)
+
+
+def report_no_converter(convs: Converters, runs: list[tuple[int, Run]], issues: IssueBag) -> None:
+    """(page, run) pairs -> a font with no converter whose text looks like a
+    legacy 8-bit encoding
+    (UP-CLI-2). Fonts with plain ASCII text (English, or a legacy font that
+    uses only ASCII codes) cannot be told apart and are not reported."""
+    counts: dict[str, list[int]] = {}
+    pages: dict[str, set[int]] = {}
+    for page, run in runs:
+        if run.converter is not None or run.rule != RULE_NONE or run.logical:
+            continue
+        c = counts.setdefault(run.font, [0, 0])
+        for ch in run.raw:
+            if not ch.isspace():
+                c[0] += 1
+                c[1] += _legacy_char(ch)
+        pages.setdefault(run.font, set()).add(page)
+    for font, (total, legacy) in counts.items():
+        if total and legacy / total >= LEGACY_SHARE:
+            suggest = _suggest(convs, font)
+            hint = f" ({suggest} may read it: --font-map '{strip_subset(font)}={suggest}')" \
+                if suggest else ""
+            issues.add(severity="warning", code=NO_CONVERTER, font=font,
+                       message=f"{font} has no converter and {legacy} of its {total} "
+                               f"characters look like a legacy encoding{hint}",
+                       context={"characters": total, "legacy": legacy, "suggest": suggest,
+                                "pages": sorted(pages[font])})

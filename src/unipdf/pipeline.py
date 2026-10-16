@@ -16,7 +16,7 @@ from collections.abc import Mapping
 
 import pymupdf
 
-from unipdf.convert.runs import BYPASS, CONVERT, Converters, convert_line
+from unipdf.convert.runs import BYPASS, CONVERT, Converters, convert_line, report_no_converter
 from unipdf.issues import NO_TEXT_LAYER, IssueBag
 from unipdf.layout.rows import ROW_TOLERANCE, visual_rows
 from unipdf.layout.words import layout_page
@@ -96,6 +96,7 @@ def read_document(
             else:
                 page.blocks = list(dict.fromkeys(line.block for line in page.lines))
             out_pages.append(page)
+        report_no_converter(convs, [(p.index, r) for p in out_pages for r in p.runs], issues)
 
         options = {
             "pages": None if pages is None else list(selected),

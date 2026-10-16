@@ -1,6 +1,6 @@
 # unipdf — Requirements
 
-Status: **Draft 5** (2026-10-16) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17); M1–M4 done, amendments marked *[M1]*–*[M4]*; OQ-9 decided (D-18).
+Status: **Draft 6** (2026-10-16) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17); M1–M5 done, amendments marked *[M1]*–*[M5]*; OQ-9 decided (D-18).
 
 unipdf reads Hindi and Marathi text out of PDFs as correct Unicode **and** says
 where every word sits on the page and how it is set (size, bold, italic). It is
@@ -457,6 +457,14 @@ Issue
   id, severity, code, message, page, font_id, bbox, context
 ```
 
+*[M5]* The emitted JSON is specified field by field in `JSON_SCHEMA.md`,
+which a test keeps equal to the output. Differences from the sketch above:
+fonts are named by the span font name (`Font.name`), not a `font_id`; issues
+name their page, font and box, and words carry no `issue_ids`; `invisible` is
+`render_mode == 3`; over-print and fake bold are bold evidence and
+`Glyph.repeats`, not a glyph flag; `Page.runs` (with provenance `pieces`) is
+included.
+
 - **UP-MD-1** Every word keeps both converted `text` and the pre-conversion
   `raw_text` of its runs, and the glyph ids behind it; both are in the default
   JSON (D-13).
@@ -475,6 +483,9 @@ Issue
   ```
 - **UP-API-2** `unipdf.convert(fontname, text)` keeps indic2unicode's string API
   for non-PDF use, plus `convert_with_provenance`.
+  *[M5]* `unipdf.convert(converter, text)`, `convert_with_provenance` (pieces
+  with input indices) and `converter_names()`; one FontConv per process, so
+  stateful converters keep state across calls as in indic2unicode.
 - **UP-CLI-1** Commands (cidpdf's filter pattern, renamed):
   - `unipdf text` — text, page separator `--- Page Break ---` (as `read_pdf.py`)
   - `unipdf words` — TSV/JSON: page, line, word, x0 y0 x1 y1, font, size, bold, italic, text
@@ -484,8 +495,23 @@ Issue
   Common flags: `-p/--pages`, `-o/--output`, `--no-repair`, `--font`,
   `--font-map`, `--no-join` (UP-LY-5), `--rawdict-lines` (output lines =
   `rawdict` lines, no row merge; with `--no-join` this is R, UP-VF-4a), `-v`.
+  *[M5]* Also `--j2`, `--convert-actual-text`; `-o` and `-v` are accepted by
+  every command. `words` and `glyphs` give TSV or `--format json` (an array,
+  one record per line) and number pages, lines, words and glyphs from 1 as
+  `-p` does (the JSON model numbers from 0). `words` adds `raw_text`; its JSON
+  adds glyph numbers and glyph ids (D-13). TSV escapes tab, newline,
+  backslash and control characters.
 - **UP-CLI-2** Missing conversions are summarised on stderr (as
   `read_pdf_cidpdf.py` does); exit status is non-zero only for real errors.
+  *[M5]* Summarised: `no_converter`, `unconverted_char`, `converter_error`,
+  `repair_failed`, `extraction_mismatch`. `no_converter` is raised for a font
+  with no converter when ≥ 20 % of its non-space characters are Latin-1,
+  private-use or control characters (the 8-bit legacy signature; on the
+  corpus only c011's `DVB-TTYogesh` and `DVB-TTYogesh,Bold`), and names a
+  converter whose name is inside the font's as a `--font-map` hint.
+  Legacy fonts using only ASCII codes are indistinguishable from English and
+  not reported. Exit status: 0 (also with warnings), 1 unreadable input
+  (missing, not a PDF, encrypted) or a wrong option value, 2 usage.
 - **UP-CLI-3** A visual overlay command (`unipdf show`: page image with word
   boxes and text) — ported from cidpdf's `visualize_pdf` — for checking geometry.
 
