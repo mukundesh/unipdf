@@ -1,6 +1,7 @@
 """unipdf command line.
 
 `unipdf text` gives the text as visual rows with split words joined.
+`unipdf show` draws word and akshara boxes over the page images.
 `--rawdict-lines --no-join --convert-actual-text` gives R's text byte for byte
 (UP-VF-4a).
 """
@@ -57,7 +58,7 @@ def write_output(text: str, path: str | None) -> None:
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
 
 
-def cmd_text(args) -> int:
+def read(args):
     import pymupdf
 
     from unipdf.pipeline import read_document
@@ -66,7 +67,7 @@ def cmd_text(args) -> int:
     if args.pages:
         with pymupdf.open(args.pdf) as doc:
             pages = parse_page_range(args.pages, doc.page_count)
-    doc = read_document(
+    return read_document(
         args.pdf,
         pages=pages,
         repair=not args.no_repair,
@@ -77,8 +78,46 @@ def cmd_text(args) -> int:
         j2=args.j2,
         actual_text="convert" if args.convert_actual_text else "bypass",
     )
-    write_output(doc.text(), args.output)
+
+
+def cmd_text(args) -> int:
+    write_output(read(args).text(), args.output)
     return 0
+
+
+def cmd_show(args) -> int:
+    from pathlib import Path
+
+    from unipdf import show
+
+    out = args.output or str(Path(args.pdf).with_suffix(".show.html").name)
+    doc = read(args)
+    if out.lower().endswith(".png"):
+        written = show.write_png(doc, args.pdf, out, zoom=args.zoom or 2.0,
+                                 clusters=args.clusters)
+    else:
+        show.write_html(doc, args.pdf, out, zoom=args.zoom or 1.5, clusters=args.clusters)
+        written = [out]
+    for path in written:
+        print(path, file=sys.stderr)
+    return 0
+
+
+def add_common(p: argparse.ArgumentParser) -> None:
+    p.add_argument("pdf")
+    p.add_argument("-p", "--pages", help="pages, e.g. '1', '1-5', '1,3,7-10'")
+    p.add_argument("--no-repair", action="store_true", help="do not repair ToUnicode maps")
+    p.add_argument("--font", help="use this converter for every font")
+    p.add_argument("--font-map", action="append", metavar="FONT=CONVERTER",
+                   help="use CONVERTER for FONT (repeatable), e.g. DVB-TTSurekh=surekh")
+    p.add_argument("--rawdict-lines", action="store_true",
+                   help="one output line per PyMuPDF line, no visual rows (the R layout)")
+    p.add_argument("--no-join", action="store_true", help="do not join split words")
+    p.add_argument("--j2", type=float, metavar="RATIO",
+                   help="also join words across a generated space narrower than RATIO x "
+                        "font size (off by default; e.g. 0.15)")
+    p.add_argument("--convert-actual-text", action="store_true",
+                   help="run converters over /ActualText too, as R does (D-18)")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -87,22 +126,19 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="command", required=True)
 
     t = sub.add_parser("text", help="the Unicode text of a PDF")
-    t.add_argument("pdf")
-    t.add_argument("-p", "--pages", help="pages, e.g. '1', '1-5', '1,3,7-10'")
+    add_common(t)
     t.add_argument("-o", "--output", help="output file (default: stdout)")
-    t.add_argument("--no-repair", action="store_true", help="do not repair ToUnicode maps")
-    t.add_argument("--font", help="use this converter for every font")
-    t.add_argument("--font-map", action="append", metavar="FONT=CONVERTER",
-                   help="use CONVERTER for FONT (repeatable), e.g. DVB-TTSurekh=surekh")
-    t.add_argument("--rawdict-lines", action="store_true",
-                   help="one output line per PyMuPDF line, no visual rows (the R layout)")
-    t.add_argument("--no-join", action="store_true", help="do not join split words")
-    t.add_argument("--j2", type=float, metavar="RATIO",
-                   help="also join words across a generated space narrower than RATIO x "
-                        "font size (off by default; e.g. 0.15)")
-    t.add_argument("--convert-actual-text", action="store_true",
-                   help="run converters over /ActualText too, as R does (D-18)")
     t.set_defaults(fn=cmd_text)
+
+    s = sub.add_parser("show", help="page images with word boxes, to check geometry")
+    add_common(s)
+    s.add_argument("-o", "--output",
+                   help="output .html (default: <pdf name>.show.html here) or .png "
+                        "(one per page: name-<page>.png)")
+    s.add_argument("--clusters", action=argparse.BooleanOptionalAction, default=True,
+                   help="draw akshara boxes too (default: yes)")
+    s.add_argument("--zoom", type=float, help="image scale (default 1.5 for HTML, 2 for PNG)")
+    s.set_defaults(fn=cmd_show)
     return ap
 
 

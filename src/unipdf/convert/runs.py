@@ -93,7 +93,9 @@ def _convert(conv_name, convs: Converters, glyphs: list[Glyph], run: Run, page: 
     conv = convs.fontconv.converters[conv_name]
     data = "".join(g.text for g in glyphs)
     owner = [g.index for g in glyphs for _ in g.text]
-    if provenance_level(conv) == "run" and conv_name not in convs._run_level_reported:
+    if provenance_level(conv) == "run":
+        run.provenance = "run"
+    if run.provenance == "run" and conv_name not in convs._run_level_reported:
         convs._run_level_reported.add(conv_name)
         issues.add(severity="info", code=PROVENANCE_UNAVAILABLE, page=page, font=run.font,
                    message=f"{conv_name}: no index map, boxes are per run")

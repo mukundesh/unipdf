@@ -82,11 +82,21 @@ class Run:
     glyphs: list[int]
     pieces: list[tuple[str, list[int]]]
     actual_text: bool = False  # holds ActualText glyphs, which bypassed the converter
+    provenance: str = "piece"  # "run": every output piece comes from the whole run
     # its text is Unicode in logical order: a converter made it, or the repair
     # made or vouched for the map (rule 1, sound map). Otherwise it is unknown:
     # an unconverted font can hand out its glyphs in visual order
     logical: bool = False
     error: str | None = None
+
+
+@dataclass
+class Cluster:
+    """an akshara of a word and the glyphs it came from (UP-AL-5)"""
+
+    text: str
+    bbox: Box | None
+    glyphs: list[int]
 
 
 @dataclass
@@ -104,6 +114,8 @@ class Word:
     joined_from: list[str] | None = None
     join_rules: list[str] | None = None  # the rule of each removed space
     unattributed: list[int] = field(default_factory=list)
+    # aksharas with boxes; None where a run has only run-level provenance
+    clusters: list[Cluster] | None = None
 
 
 @dataclass

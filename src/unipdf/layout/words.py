@@ -20,12 +20,13 @@ contains, or is nearest to, their centre.
 
 from __future__ import annotations
 
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 from itertools import chain
 
 from unipdf.issues import JOINED_WORDS, IssueBag
-from unipdf.model import Glyph, Line, Page, Run, Word, union
+from unipdf.model import Cluster, Glyph, Line, Page, Run, Word, union
 from unipdf.pdf.glyphs import RawLine
 
 # characters that cannot begin a Devanagari word (UP-LY-5 J1)
@@ -35,6 +36,7 @@ J1_MARKS = frozenset(
                    range(0x0962, 0x0964))
 )
 J1, J2 = "J1", "J2"
+VIRAMA = "\u094d"
 
 
 @dataclass
@@ -43,7 +45,12 @@ class _Tok:
     glyphs: set[int]
     space: bool
     generated: bool = False  # the space unipdf puts between the lines of a row
-    first: tuple[int, ...] = ()  # the glyphs of its first character
+    chars: list[tuple[str, tuple[int, ...]]] = field(default_factory=list)  # with sources
+
+    @property
+    def first(self) -> tuple[int, ...]:
+        """the glyphs of its first character"""
+        return self.chars[0][1] if self.chars else ()
 
 
 def _line_tokens(runs: list[Run]) -> list[_Tok]:
@@ -55,8 +62,9 @@ def _line_tokens(runs: list[Run]) -> list[_Tok]:
                 if toks and toks[-1].space == sp:
                     toks[-1].text += ch
                     toks[-1].glyphs.update(src)
+                    toks[-1].chars.append((ch, tuple(src)))
                 else:
-                    toks.append(_Tok(ch, set(src), sp, first=tuple(src)))
+                    toks.append(_Tok(ch, set(src), sp, chars=[(ch, tuple(src))]))
     return toks
 
 
@@ -69,6 +77,7 @@ def _row_tokens(lines: list[RawLine], runs_by_line) -> list[_Tok]:
         if toks and toks[-1].space and lt[0].space:
             toks[-1].text += lt[0].text
             toks[-1].glyphs.update(lt[0].glyphs)
+            toks[-1].chars.extend(lt[0].chars)
             toks[-1].generated = False
             lt = lt[1:]
         elif toks and not toks[-1].space and not lt[0].space:
@@ -103,8 +112,45 @@ class _Word:
         return "".join(p.text for p in self.parts)
 
 
+def _is_consonant(ch: str) -> bool:
+    c = ord(ch)
+    return 0x0915 <= c <= 0x0939 or 0x0958 <= c <= 0x095F or 0x0978 <= c <= 0x097F
+
+
+def _continues(prev: str, ch: str) -> bool:
+    """whether ch belongs to the akshara prev is in"""
+    if ch in "\u200c\u200d" or unicodedata.category(ch) in ("Mn", "Mc", "Me"):
+        return True
+    return prev == VIRAMA and _is_consonant(ch)
+
+
+def aksharas(chars: list[tuple[str, tuple[int, ...]]]) -> list[tuple[str, set[int]]]:
+    """a word's characters grouped into aksharas (UP-AL-5): a consonant with
+    the consonants it is joined to by virama and its signs, an independent
+    vowel with its signs. Any other character is one of its own"""
+    out: list[tuple[str, set[int]]] = []
+    prev = ""
+    for ch, src in chars:
+        if out and _continues(prev, ch):
+            out[-1] = (out[-1][0] + ch, out[-1][1] | set(src))
+        else:
+            out.append((ch, set(src)))
+        prev = ch
+    return out
+
+
+def _clusters(w: _Word, glyphs: list[Glyph]) -> list[Cluster]:
+    chars = [c for p in w.parts for c in p.chars]
+    out = []
+    for text, src in aksharas(chars):
+        ink = [glyphs[i] for i in sorted(src)
+               if not glyphs[i].synthetic and not glyphs[i].text.isspace()]
+        out.append(Cluster(text, union(g.bbox for g in ink), sorted(src)))
+    return out
+
+
 def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
-               extra: list[int]) -> Word:
+               extra: list[int], coarse: set[int]) -> Word:
     gset = set().union(*(p.glyphs for p in w.parts), extra)
     gl = [glyphs[i] for i in sorted(gset)]
     ink = [g for g in gl if not g.synthetic and not g.text.isspace()]
@@ -128,6 +174,8 @@ def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
         joined_from=[p.text for p in w.parts] if len(w.parts) > 1 else None,
         join_rules=list(w.rules) or None,
         unattributed=sorted(extra),
+        # where every glyph has its own provenance (UP-AL-5)
+        clusters=None if gset & coarse else _clusters(w, glyphs),
     )
 
 
@@ -167,9 +215,12 @@ def layout_page(
     glyphs = page.glyphs
     runs_by_line: dict[tuple[int, int], list[Run]] = {}
     logical: set[int] = set()
+    coarse: set[int] = set()  # glyphs of runs with run-level provenance
     for run in runs:
         runs_by_line.setdefault((run.block, run.line), []).append(run)
         logical.update(gi for gi in run.glyphs if run.logical or glyphs[gi].actual_text)
+        if run.provenance == "run":
+            coarse.update(run.glyphs)
 
     for row in rows:
         toks = _row_tokens(row, runs_by_line)
@@ -204,7 +255,7 @@ def layout_page(
         extra = _attach_unattributed(words, row, glyphs)
         first = len(page.words)
         for k, w in enumerate(words):
-            page.words.append(_make_word(first + k, line_index, w, glyphs, extra[k]))
+            page.words.append(_make_word(first + k, line_index, w, glyphs, extra[k], coarse))
         line_words = page.words[first:]
         page.lines.append(Line(
             index=line_index,

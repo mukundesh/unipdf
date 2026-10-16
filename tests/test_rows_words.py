@@ -4,7 +4,7 @@ import pytest
 
 from unipdf.issues import IssueBag
 from unipdf.layout.rows import visual_rows
-from unipdf.layout.words import J1_MARKS, layout_page
+from unipdf.layout.words import J1_MARKS, aksharas, layout_page
 from unipdf.model import Glyph, Page, Run
 from unipdf.pdf.glyphs import RawLine
 
@@ -152,3 +152,31 @@ def test_unattributed_glyph_joins_nearest_word():
     assert page.words[0].unattributed == [2]
     assert page.words[0].bbox == (10, 92, 25, 102)
     assert page.words[1].unattributed == []
+
+
+@pytest.mark.parametrize("word,want", [
+    ("विद्यापीठ,", ["वि", "द्या", "पी", "ठ", ","]),
+    ("अंतर्गत", ["अं", "त", "र्ग", "त"]),
+    ("क्ष‍त्र", ["क्ष‍", "त्र"]),
+    ("ड़ॉ", ["ड़ॉ"]),
+    ("ab1", ["a", "b", "1"]),
+])
+def test_aksharas(word, want):
+    assert [t for t, _ in aksharas([(ch, (i,)) for i, ch in enumerate(word)])] == want
+
+
+def test_word_clusters_follow_provenance():
+    b = Builder().line("िक", x=10, advance=5.0)
+    # the converter puts the matra after its consonant: कि from glyphs 1, 0
+    b.runs[0].pieces = [("क", [1]), ("ि", [0])]
+    page, _ = b.page()
+    (w,) = page.words
+    assert w.text == "कि"
+    assert [(c.text, c.glyphs, c.bbox) for c in w.clusters] == [("कि", [0, 1], (10, 92, 20, 102))]
+
+
+def test_no_clusters_with_run_level_provenance():
+    b = Builder().line("ab")
+    b.runs[0].provenance = "run"
+    page, _ = b.page()
+    assert page.words[0].clusters is None
