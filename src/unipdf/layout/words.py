@@ -25,8 +25,9 @@ from collections import Counter
 from dataclasses import dataclass, field
 from itertools import chain
 
+from unipdf.attributes import font_run, word_attributes
 from unipdf.issues import JOINED_WORDS, IssueBag
-from unipdf.model import Cluster, Glyph, Line, Page, Run, Word, union
+from unipdf.model import Cluster, FontRun, Glyph, Line, Page, Run, Word, union
 from unipdf.pdf.glyphs import RawLine
 
 # characters that cannot begin a Devanagari word (UP-LY-5 J1)
@@ -149,8 +150,27 @@ def _clusters(w: _Word, glyphs: list[Glyph]) -> list[Cluster]:
     return out
 
 
+def _font_runs(w: _Word, gl: list[Glyph], glyphs: list[Glyph], font_of) -> list[FontRun]:
+    """the word's glyphs in consecutive same-font groups, each with the
+    converted characters whose first source glyph is in it"""
+    groups: list[list[Glyph]] = []
+    for g in gl:
+        if groups and groups[-1][-1].font == g.font:
+            groups[-1].append(g)
+        else:
+            groups.append([g])
+    group_of = {g.index: k for k, grp in enumerate(groups) for g in grp}
+    texts = [""] * len(groups)
+    for p in w.parts:
+        for ch, src in p.chars:
+            if src and min(src) in group_of:
+                texts[group_of[min(src)]] += ch
+    return [font_run(grp[0].font, font_of(grp[0].font), grp, texts[k])
+            for k, grp in enumerate(groups)]
+
+
 def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
-               extra: list[int], coarse: set[int]) -> Word:
+               extra: list[int], coarse: set[int], font_of) -> Word:
     gset = set().union(*(p.glyphs for p in w.parts), extra)
     gl = [glyphs[i] for i in sorted(gset)]
     ink = [g for g in gl if not g.synthetic and not g.text.isspace()]
@@ -161,6 +181,8 @@ def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
         elif g.glyph_id is not None:
             ids.append(g.glyph_id)
     sizes = Counter(g.size for g in ink)
+    runs = _font_runs(w, gl, glyphs, font_of)
+    bold, bold_ev, italic, italic_ev = word_attributes(runs)
     return Word(
         index=index,
         line=line_index,
@@ -176,6 +198,12 @@ def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
         unattributed=sorted(extra),
         # where every glyph has its own provenance (UP-AL-5)
         clusters=None if gset & coarse else _clusters(w, glyphs),
+        sizes=sorted(sizes),
+        font_runs=runs,
+        bold=bold,
+        bold_evidence=bold_ev,
+        italic=italic,
+        italic_evidence=italic_ev,
     )
 
 
@@ -210,8 +238,10 @@ def layout_page(
     issues: IssueBag,
     join: bool = True,
     j2: float | None = None,
+    font_of=lambda name: None,
 ) -> None:
-    """fill page.lines and page.words from rows of rawdict lines"""
+    """fill page.lines and page.words from rows of rawdict lines. font_of(name)
+    gives the font record that bold and italic come from"""
     glyphs = page.glyphs
     runs_by_line: dict[tuple[int, int], list[Run]] = {}
     logical: set[int] = set()
@@ -255,7 +285,8 @@ def layout_page(
         extra = _attach_unattributed(words, row, glyphs)
         first = len(page.words)
         for k, w in enumerate(words):
-            page.words.append(_make_word(first + k, line_index, w, glyphs, extra[k], coarse))
+            page.words.append(_make_word(first + k, line_index, w, glyphs, extra[k], coarse,
+                                         font_of))
         line_words = page.words[first:]
         page.lines.append(Line(
             index=line_index,

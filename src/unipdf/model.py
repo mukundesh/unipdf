@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from unipdf.issues import Issue
+from unipdf.pdf.fonts import FontProgram
 
 SCHEMA_VERSION = "0.1"
 PAGE_BREAK = "\n\n--- Page Break ---\n\n"
@@ -100,6 +101,22 @@ class Cluster:
 
 
 @dataclass
+class FontRun:
+    """the part of a word in one font (UP-AT-4)"""
+
+    font: str
+    text: str
+    raw_text: str
+    bbox: Box | None
+    glyphs: list[int]
+    size: float | None
+    bold: bool = False
+    bold_evidence: list[str] = field(default_factory=list)
+    italic: bool = False
+    italic_evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
 class Word:
     index: int
     line: int
@@ -116,6 +133,13 @@ class Word:
     unattributed: list[int] = field(default_factory=list)
     # aksharas with boxes; None where a run has only run-level provenance
     clusters: list[Cluster] | None = None
+    # attributes (UP-AT-1..4): size above is the most common glyph size
+    sizes: list[float] = field(default_factory=list)
+    font_runs: list[FontRun] = field(default_factory=list)
+    bold: bool = False
+    bold_evidence: list[str] = field(default_factory=list)
+    italic: bool = False
+    italic_evidence: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -152,8 +176,10 @@ class Page:
 
 @dataclass
 class Font:
-    """What M2 knows of a font: its name and how it is converted (UP-FN-5).
-    Font-program metadata arrives in M4 (UP-FN-1)."""
+    """A font as spans name it (UP-FN-1, UP-FN-6): how it is converted
+    (UP-FN-5), the PDF font objects of that name, and bold/italic evidence.
+    Evidence only some of its programs carry is listed as "(k of n programs)"
+    and does not decide."""
 
     name: str
     converter: str | None
@@ -161,6 +187,11 @@ class Font:
     matched: str | None
     repaired: bool
     repaired_as: str | None
+    programs: list[FontProgram] = field(default_factory=list)
+    bold: bool = False
+    bold_evidence: list[str] = field(default_factory=list)
+    italic: bool = False
+    italic_evidence: list[str] = field(default_factory=list)
 
 
 @dataclass

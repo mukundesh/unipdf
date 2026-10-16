@@ -28,25 +28,30 @@ from unipdf.convert.resolve import (
 from unipdf.i2u.fontconv import FontConv
 from unipdf.issues import CONVERTER_ERROR, PROVENANCE_UNAVAILABLE, UNCONVERTED_CHAR, IssueBag
 from unipdf.model import Font, Glyph, Run
+from unipdf.pdf.fonts import FontProgram, combine, name_evidence
 from unipdf.pdf.glyphs import RawLine
 
 BYPASS, CONVERT = "bypass", "convert"
 
 
 class Converters:
-    """The converters of one document, and the decision for each font name."""
+    """The converters of one document, and the font record of each font name
+    (its converter, its PDF font objects, its bold/italic evidence)."""
 
     def __init__(
         self,
         repaired: Mapping[str, str] | None,
         force: str | None = None,
         font_map: Mapping[str, str] | None = None,
+        programs: Mapping[str, list[FontProgram]] | None = None,
     ):
         self.fontconv = FontConv()
         self.resolver = ConverterResolver(self.fontconv.converters, force=force,
                                           font_map=font_map)
         self.repaired = repaired
+        self.programs = programs or {}
         self.resolutions: dict[str, Resolution] = {}
+        self.records: dict[str, Font] = {}
         self._run_level_reported: set[str] = set()
 
     def resolve(self, font: str) -> Resolution:
@@ -55,15 +60,30 @@ class Converters:
             res = self.resolutions[font] = self.resolver.resolve(font, self.repaired)
         return res
 
+    def font(self, name: str) -> Font:
+        rec = self.records.get(name)
+        if rec is not None:
+            return rec
+        res = self.resolve(name)
+        repaired_as = None
+        if self.repaired is not None:
+            repaired_as = self.repaired.get(strip_subset(name))
+        progs = self.programs.get(strip_subset(name), [])
+        if progs:
+            bold, bold_ev = combine([p.bold_evidence(name) for p in progs])
+            italic, italic_ev = combine([p.italic_evidence(name) for p in progs])
+        else:
+            bold_ev, italic_ev = name_evidence(name)
+            bold, italic = bool(bold_ev), bool(italic_ev)
+        rec = self.records[name] = Font(
+            name, res.converter, res.rule, res.matched, repaired_as is not None, repaired_as,
+            programs=progs, bold=bold, bold_evidence=bold_ev, italic=italic,
+            italic_evidence=italic_ev,
+        )
+        return rec
+
     def fonts(self) -> list[Font]:
-        out = []
-        for name, res in self.resolutions.items():
-            repaired_as = None
-            if self.repaired is not None:
-                repaired_as = self.repaired.get(strip_subset(name))
-            out.append(Font(name, res.converter, res.rule, res.matched,
-                            repaired_as is not None, repaired_as))
-        return out
+        return [self.font(name) for name in self.resolutions]
 
 
 def _error_counts(conv) -> Counter:

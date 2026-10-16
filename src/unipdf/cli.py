@@ -85,6 +85,27 @@ def cmd_text(args) -> int:
     return 0
 
 
+def fonts_table(doc) -> str:
+    """UP-CLI-1 `fonts`: one row per font name, as tab-separated values"""
+    head = ["font", "converter", "rule", "repaired_as", "programs", "bold", "bold_evidence",
+            "italic", "italic_evidence"]
+    rows = ["\t".join(head)]
+    for f in sorted(doc.fonts, key=lambda f: f.name):
+        progs = " ".join(
+            f"{p.xref}:{p.type}:{p.encoding or '-'}:{'emb' if p.embedded else 'ext'}"
+            f"{':tu' if p.has_tounicode else ''}" for p in f.programs) or "-"
+        rows.append("\t".join(str(v) for v in [
+            f.name, f.converter or "-", f.rule, f.repaired_as or "-", progs,
+            f.bold, "; ".join(f.bold_evidence) or "-", f.italic,
+            "; ".join(f.italic_evidence) or "-"]))
+    return "\n".join(rows)
+
+
+def cmd_fonts(args) -> int:
+    write_output(fonts_table(read(args)), args.output)
+    return 0
+
+
 def cmd_show(args) -> int:
     from pathlib import Path
 
@@ -129,6 +150,11 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(t)
     t.add_argument("-o", "--output", help="output file (default: stdout)")
     t.set_defaults(fn=cmd_text)
+
+    f = sub.add_parser("fonts", help="font table: converter, resolution rule, bold, italic")
+    add_common(f)
+    f.add_argument("-o", "--output", help="output file (default: stdout)")
+    f.set_defaults(fn=cmd_fonts)
 
     s = sub.add_parser("show", help="page images with word boxes, to check geometry")
     add_common(s)

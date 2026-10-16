@@ -1,0 +1,215 @@
+# UP-VF-7: hand-labelled bold / italic. Each word's ink was looked at at 5x,
+# without boxes or labels, beside words of the same face (2026-10-16), and
+# labelled by eye. kinds: bold_font (a bold face), stroke_bold (Word's
+# synthetic bold: fill then stroke), italic, plain. Over-printed bold occurs in
+# no corpus PDF; test_attributes.py covers it on hand-made glyphs. page is 1-based.
+- pdf: c002
+  page: 1
+  text: महात्मा
+  kind: stroke_bold
+  bold: true
+  italic: false
+  bbox: [364.6, 26.8, 398.9, 45.9]
+- pdf: c002
+  page: 1
+  text: फुले
+  kind: stroke_bold
+  bold: true
+  italic: false
+  bbox: [402.2, 26.8, 422.4, 45.9]
+- pdf: c002
+  page: 1
+  text: कृषि
+  kind: stroke_bold
+  bold: true
+  italic: false
+  bbox: [425.9, 26.8, 446.8, 45.9]
+- pdf: c002
+  page: 1
+  text: विद्यापीठ,
+  kind: stroke_bold
+  bold: true
+  italic: false
+  bbox: [450.1, 26.8, 496.0, 45.9]
+- pdf: c002
+  page: 1
+  text: मादाम
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [221.4, 228.0, 251.6, 247.0]
+- pdf: c002
+  page: 1
+  text: कामा
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [254.7, 228.0, 279.5, 247.0]
+- pdf: c002
+  page: 4
+  text: Compound
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [422.2, 155.6, 455.8, 163.4]
+- pdf: c002
+  page: 4
+  text: Wise
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [457.5, 155.6, 472.4, 163.4]
+- pdf: c002
+  page: 4
+  text: (a)
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [82.8, 190.0, 90.7, 197.9]
+- pdf: c002
+  page: 4
+  text: Building
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [92.5, 190.0, 117.1, 197.9]
+- pdf: c002
+  page: 4
+  text: कृषि
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [137.9, 39.4, 150.1, 49.6]
+- pdf: c002
+  page: 4
+  text: पदुम
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [160.2, 39.4, 173.0, 49.6]
+- pdf: c008
+  page: 1
+  text: मंत्रालय,
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [277.0, 134.1, 313.5, 151.5]
+- pdf: c008
+  page: 1
+  text: मुंबई
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [316.8, 134.1, 337.0, 151.5]
+- pdf: c015
+  page: 1
+  text: महाराष्ट्र
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [315.8, 177.0, 353.4, 193.9]
+- pdf: c015
+  page: 1
+  text: राज्य
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [357.4, 177.0, 381.7, 192.5]
+- pdf: c015
+  page: 2
+  text: पृष्ठ
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [486.6, 808.3, 500.3, 823.7]
+- pdf: c015
+  page: 2
+  text: पैकी
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [513.1, 809.3, 530.2, 823.5]
+- pdf: c024
+  page: 2
+  text: “9.
+  kind: italic
+  bold: false
+  italic: true
+  bbox: [161.7, 271.8, 178.6, 286.2]
+- pdf: c024
+  page: 2
+  text: Before
+  kind: italic
+  bold: false
+  italic: true
+  bbox: [191.1, 271.8, 225.6, 286.2]
+- pdf: c024
+  page: 2
+  text: Parting
+  kind: italic
+  bold: false
+  italic: true
+  bbox: [229.7, 271.8, 269.4, 286.2]
+- pdf: c024
+  page: 2
+  text: with
+  kind: italic
+  bold: false
+  italic: true
+  bbox: [273.5, 271.8, 295.8, 286.2]
+- pdf: c006
+  page: 1
+  text: पश्चिम
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [61.5, 33.1, 82.9, 45.0]
+- pdf: c006
+  page: 1
+  text: बंगाल
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [85.2, 33.1, 106.9, 45.0]
+- pdf: c006
+  page: 1
+  text: West
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [485.5, 34.0, 504.5, 44.0]
+- pdf: c006
+  page: 1
+  text: Bengal
+  kind: bold_font
+  bold: true
+  italic: false
+  bbox: [506.7, 34.0, 533.2, 44.0]
+- pdf: c006
+  page: 1
+  text: सर्वश्री
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [101.2, 67.6, 121.1, 79.5]
+- pdf: c006
+  page: 1
+  text: पुष्पाा
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [101.2, 84.8, 117.1, 96.8]
+- pdf: c006
+  page: 1
+  text: S/Shri
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [127.9, 69.2, 150.4, 79.2]
+- pdf: c006
+  page: 1
+  text: '150'
+  kind: plain
+  bold: false
+  italic: false
+  bbox: [61.5, 86.5, 75.0, 96.5]

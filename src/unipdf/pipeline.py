@@ -21,6 +21,7 @@ from unipdf.issues import NO_TEXT_LAYER, IssueBag
 from unipdf.layout.rows import ROW_TOLERANCE, visual_rows
 from unipdf.layout.words import layout_page
 from unipdf.model import Document, Page
+from unipdf.pdf.fonts import read_programs
 from unipdf.pdf.glyphs import extract_page
 from unipdf.pdf.repair import repair as repair_document
 
@@ -65,10 +66,11 @@ def read_document(
         if doc.needs_pass:
             raise PasswordRequired(info["filename"] or "<bytes>")
         issues = IssueBag()
-        repaired = repair_document(doc, issues).repaired if repair else None
-        convs = Converters(repaired, force=force, font_map=font_map)
         selected = range(doc.page_count) if pages is None else \
             [p for p in pages if 0 <= p < doc.page_count]
+        programs = read_programs(doc, selected)  # before repair rewrites ToUnicode
+        repaired = repair_document(doc, issues).repaired if repair else None
+        convs = Converters(repaired, force=force, font_map=font_map, programs=programs)
 
         out_pages = []
         for pno in selected:
@@ -87,7 +89,8 @@ def read_document(
                 rows = [[line] for line in pg.lines]
             else:
                 rows = visual_rows(pg.lines, row_tolerance)
-            layout_page(page, pg.lines, page.runs, rows, issues, join=join, j2=j2)
+            layout_page(page, pg.lines, page.runs, rows, issues, join=join, j2=j2,
+                        font_of=convs.font)
             if rawdict_lines:
                 page.blocks = list(pg.blocks)
             else:
