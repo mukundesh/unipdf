@@ -18,13 +18,31 @@ def test_parse_font_map():
         parse_font_map(["surekh"])
 
 
-def test_text_rawdict_lines_no_join_is_r(tmp_path):
+def corpus_pdf(pdf_id):
+    return next(p for e, p in corpus_pdfs() if e["id"] == pdf_id)
+
+
+@pytest.mark.parametrize("pdf_id", ["c002", "c003"])
+def test_text_r_layout_is_r(tmp_path, pdf_id):
     # UP-VF-4a: the R layout reproduces the golden byte for byte
-    pdf = next(p for e, p in corpus_pdfs() if e["id"] == "c002")
     out = tmp_path / "out.txt"
-    assert main(["text", "--rawdict-lines", "--no-join", str(pdf), "-o", str(out)]) == 0
-    txt, _ = golden_paths("c002")
+    args = ["text", "--rawdict-lines", "--no-join", "--convert-actual-text"]
+    assert main([*args, str(corpus_pdf(pdf_id)), "-o", str(out)]) == 0
+    txt, _ = golden_paths(pdf_id)
     assert out.read_text(encoding="utf-8") == txt.read_text(encoding="utf-8") + "\n"
+
+
+def test_text_actual_text_bypasses_converter(capsys):
+    # D-18: Google Docs' ActualText हि is not reordered again (R: हंिदी)
+    assert main(["text", str(corpus_pdf("c003"))]) == 0
+    assert capsys.readouterr().out == "हिंदी \n"
+
+
+def test_text_rows(capsys):
+    # UP-LY-2: MuPDF gives this printed line as several rawdict lines
+    assert main(["text", "-p", "1", str(corpus_pdf("c002"))]) == 0
+    lines = [line.strip() for line in capsys.readouterr().out.splitlines()]
+    assert "डेअरी फार्म, मांजरी, पुणे येथील" in lines
 
 
 def test_bad_input_exits_1(tmp_path, capsys):

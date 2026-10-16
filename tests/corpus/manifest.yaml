@@ -54,7 +54,8 @@ pdfs:
   - mangal_glyphs
   reasons:
   - Google Docs Mangal, repaired, with ActualText
-  known_bad: 'हंिदी for हिंदी: mangal_glyphs reorders ActualText that is already logical (OQ-9)'
+  known_bad: 'R gives हंिदी for हिंदी: mangal_glyphs reorders ActualText that is already logical. unipdf
+    gives हिंदी (D-18)'
   id: c003
   sha256: 37e7bf106c13fbdd8d07d4d1905195478c5e7c42523f73f313949bd27dd136d7
   file: pdfs/c003.pdf

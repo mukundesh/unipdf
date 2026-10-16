@@ -1,8 +1,8 @@
 """unipdf command line.
 
-M1: `unipdf text` runs the reference pipeline R (reference.py). That is what
-`--rawdict-lines --no-join` will keep meaning once unipdf's own pipeline
-lands in M2 (UP-VF-4a); until then every mode gives R's text.
+`unipdf text` gives the text as visual rows with split words joined.
+`--rawdict-lines --no-join --convert-actual-text` gives R's text byte for byte
+(UP-VF-4a).
 """
 
 from __future__ import annotations
@@ -60,18 +60,22 @@ def write_output(text: str, path: str | None) -> None:
 def cmd_text(args) -> int:
     import pymupdf
 
-    from unipdf.reference import read_reference
+    from unipdf.pipeline import read_document
 
     pages = None
     if args.pages:
         with pymupdf.open(args.pdf) as doc:
             pages = parse_page_range(args.pages, doc.page_count)
-    doc = read_reference(
+    doc = read_document(
         args.pdf,
         pages=pages,
         repair=not args.no_repair,
         force=args.font,
         font_map=parse_font_map(args.font_map),
+        join=not args.no_join,
+        rawdict_lines=args.rawdict_lines,
+        j2=args.j2,
+        actual_text="convert" if args.convert_actual_text else "bypass",
     )
     write_output(doc.text(), args.output)
     return 0
@@ -93,6 +97,11 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--rawdict-lines", action="store_true",
                    help="one output line per PyMuPDF line, no visual rows (the R layout)")
     t.add_argument("--no-join", action="store_true", help="do not join split words")
+    t.add_argument("--j2", type=float, metavar="RATIO",
+                   help="also join words across a generated space narrower than RATIO x "
+                        "font size (off by default; e.g. 0.15)")
+    t.add_argument("--convert-actual-text", action="store_true",
+                   help="run converters over /ActualText too, as R does (D-18)")
     t.set_defaults(fn=cmd_text)
     return ap
 

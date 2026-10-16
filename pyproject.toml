@@ -35,6 +35,7 @@ filterwarnings = ["ignore:builtin type .* has no __module__ attribute:Deprecatio
 markers = [
     "gate: Devanagari converter regression, part of the release gate",
     "smoke: other-script converter regression, shipped unchanged (D-9)",
+    "slow: takes more than a few seconds; deselect with -m 'not slow'",
 ]
 
 [tool.ruff]

@@ -135,7 +135,34 @@ corpus goldens, 4 CLI). `tools/check_upstream.sh` proves `i2u/` = upstream
   scanned), lossy arialuni/nirmalaui (repair-off only), Sakal two-numbering
   PUA text (none found). These are covered by testdata only.
 
-### M2 — Glyph model, runs, text with rows and joins (L)
+### M2 — Glyph model, runs, text with rows and joins (L) — **done 2026-10-16**
+
+Outcome: 278 tests green (`uv run pytest`, 2 min 15 s; `-m "not slow"`
+skips two line-by-line provenance files). The parity gate (`test_parity.py`)
+passes on all 23 corpus PDFs: every run equals R's, words equal R's, the R
+layout is R byte for byte. Changes against the steps below, all recorded in
+REQUIREMENTS Draft 5 (*[M2]*):
+
+- The glyph join (step 3) runs on a second `rawdict` made with
+  `TEXT_IGNORE_ACTUALTEXT`. ActualText is found by diffing the two per line.
+  Result: 100 % joined, against 99.97 % in S1 (whose misses were all
+  ActualText).
+- OQ-9 was decided (b) = D-18: ActualText bypasses the converter. It fixes
+  `Hindi-Google.pdf`. `--convert-actual-text` gives R's behaviour.
+- The tracked path (M3 step 1) and its equivalence test (M3 step 3, testdata
+  part) moved here: step 4's `unconverted_char` needs it, and with it word
+  glyphs come from provenance directly. The raw-split boxes of step 6 were
+  never built.
+- J1 is limited to logical-order text (`Run.logical`): on the
+  Lohit-Devanagari PDF (unconverted, visual order) it joined `भोपाल,` +
+  `िदनांक`.
+- Step 9: J2 is off by default. The corpus's 83 synthetic spaces are all real
+  word gaps (gap / size ≥ 0.151); no `रे लवे`-type document. `--j2 RATIO`
+  enables it.
+- Step 8: with visual rows, words are compared as a multiset per page: one
+  OCR-layer page lists a row's lines right to left.
+- UP-RP-4 is per document (`fix_document` is one call; D-16).
+- UP-NF-3: `unipdf text` over the corpus 5.5 s against R's 4.0 s (×1.38).
 
 1. `model.py`: dataclasses from REQUIREMENTS §5.9 (top-left points,
    `(x0, y0, x1, y1)`), `to_dict`/`to_json` with `schema_version`, stable
@@ -175,19 +202,18 @@ Exit: parity gate green on the whole corpus; `unipdf text` usable.
 
 ### M3 — Provenance and geometry (L)
 
-1. Tracked path (UP-AL-1) in `convert/provenance.py`, ported from
-   `spikes/m0/tracked.py`, as functions over unmodified converter instances
-   (§3, D-16). `i2u/` is not edited.
+*After M2: steps 1 and 3 and the word half of step 4 are done (M2 outcome).*
+
+1. ~~Tracked path (UP-AL-1) in `convert/provenance.py`~~ — done in M2.
 2. Pre-pass adapters (UP-AL-2) in `convert/provenance.py`: `chanakya`
    (ZWJ/ZWNJ deletion map), `sakal` (identity), `arialuni_glyphs` and
-   subclasses (per-segment offsets), `abhishek` (its own token pipeline,
-   tracked version of `drop_shared_tokens`). Any other converter that
-   overrides `to_unicode` or a pass → run-level, issue
-   `provenance_unavailable`.
-3. Equivalence test (UP-AL-3, UP-VF-2): every Devanagari `testdata` file and
-   every corpus run: tracked text == `to_unicode` text.
-4. Word boxes from provenance (UP-AL-4, UP-AL-6); cluster boxes where
-   available (UP-AL-5); replaces M2's raw-split boxes.
+   subclasses (per-segment offsets) are done in M2. Remaining: `abhishek`
+   (its own token pipeline, tracked version of `drop_shared_tokens`; run-level
+   until then, issue `provenance_unavailable`).
+3. ~~Equivalence test (UP-AL-3, UP-VF-2)~~ — done in M2
+   (`test_provenance_equivalence.py`; corpus runs through `test_parity.py`).
+4. Cluster boxes where available (UP-AL-5). Word boxes from provenance
+   (UP-AL-4, UP-AL-6) are done in M2.
 5. `show.py` + `unipdf show` (port cidpdf `visualize_pdf` drawing, word and
    cluster boxes, text labels).
 6. Geometry invariants test (UP-VF-5) over the corpus; hand-checked
@@ -281,5 +307,6 @@ exists. Within M1, corpus building (step 6) can run alongside steps 2–5.
 - After **M0**: if S1 fails, per-glyph render mode/over-print evidence
   degrades to span level (affects UP-AT-2 only). If S2 fails for a converter,
   that converter gets run-level boxes. If S3 fails, D-14 changes.
-- After **M2 step 9**: J2 on or off by default.
-- After **M3**: whether to keep M2's raw-split word boxes as a fast mode.
+- After **M2 step 9**: J2 on or off by default. *Decided: off (M2 outcome).*
+- ~~After **M3**: whether to keep M2's raw-split word boxes as a fast mode.~~
+  Not built: M2 takes word glyphs from provenance.

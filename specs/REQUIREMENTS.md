@@ -1,6 +1,6 @@
 # unipdf — Requirements
 
-Status: **Draft 4** (2026-10-16) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17).
+Status: **Draft 5** (2026-10-16) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17); M1, M2 done, amendments marked *[M1]*, *[M2]*; OQ-9 decided (D-18).
 
 unipdf reads Hindi and Marathi text out of PDFs as correct Unicode **and** says
 where every word sits on the page and how it is set (size, bold, italic). It is
@@ -34,6 +34,7 @@ built by absorbing two existing libraries in this repository:
 | D-15 | *[M0]* `rawdict` characters are joined to `texttrace` entries by **sequence first, origin second** (SPIKES §1.2): 99.97 % joined on the spike corpus, every miss inside `/ActualText`. `/ActualText` is honoured as R does. | SPIKES §1 |
 | D-16 | *[M0]* The absorbed indic2unicode code is **not edited** beyond the import rewrite. Provenance runs BaseFont's passes as separate functions over (token, sources) pairs on unmodified converter instances, pinned to `to_unicode` by test. | SPIKES §2.1 |
 | D-17 | Legacy 8-bit fonts with no resolvable name (`DVB-TTSurekh`, `DVB-TTSurekhEN`, `DVB-TTYogesh`) stay unconverted in v1, matching R; `--font-map` is available. Later, a separate **input adapter** per legacy font maps PyMuPDF's characters to the bytes the converter expects (OQ-8). | Owner, 2026-10-16 |
+| D-18 | *[M2]* `/ActualText` is already logical-order Unicode and **bypasses the converter**; the rest of its run is converted around it, in order (OQ-9 option b). A recorded departure from R like D-12: `Hindi-Google.pdf` gives `हिंदी` where R gives `हंिदी`. `--convert-actual-text` (`actual_text="convert"`) restores R's behaviour. | Owner, 2026-10-16 |
 
 ## 2. The PDF engine (D-8): rationale and evidence
 
@@ -174,6 +175,8 @@ Requirement IDs are stable; tests reference them.
   run without repair.
 - **UP-RP-4** If repair raises, log an issue `repair_failed` with the font and
   continue unrepaired for that font, rather than failing the document.
+  *[M2]* Per document, not per font: `fix_document` repairs every font in one
+  call and is not edited (D-16). The document goes on unrepaired, as in R.
 
 ### 5.3 Glyph extraction
 
@@ -187,6 +190,10 @@ Requirement IDs are stable; tests reference them.
   line width and the repeated-pass record come from `texttrace`. A character
   that does not join keeps its `rawdict` data, with glyph id `null` and an
   issue `unjoined_glyph`.
+  *[M2]* The join runs on a second `rawdict` made with
+  `TEXT_IGNORE_ACTUALTEXT`, whose characters are the glyphs and agree with
+  `texttrace`; the default `rawdict` (R's text) is aligned to it line by
+  line. 142,925 glyphs of the M1 corpus: 100 % joined.
 - **UP-EX-2** The glyph text fed to converters must be byte-identical to the
   `rawdict` text the reference pipeline uses. Any additional source
   (texttrace) is joined to it, never substituted for it.
@@ -214,6 +221,11 @@ Requirement IDs are stable; tests reference them.
   it. Those characters get the glyph ids of the span's glyphs as a group,
   without a 1:1 glyph, and are flagged `actual_text`. (2 of 19 spike PDFs:
   Word and Google Docs exports.)
+  *[M2]* ActualText is found by diffing, per line, the default `rawdict`
+  with the one made with `TEXT_IGNORE_ACTUALTEXT` (the line structure is the
+  same in both on the whole corpus): where they differ, the default
+  characters are ActualText. Each group is one glyph record with
+  `actual_text_glyph_ids`. Its text bypasses the converter (D-18).
 
 ### 5.4 Font identification and converter resolution
 
@@ -269,6 +281,11 @@ Requirement IDs are stable; tests reference them.
 - **UP-CV-4** Characters a converter drops (no token) are reported as issues
   `unconverted_char` with code point, font, page and bbox — today they are
   only logged.
+  *[M2]* "Drops" means what indic2unicode itself reports (`report_error`,
+  read as the change in the converter's `errchars` count over the run) at an
+  input index with no output. Characters a lexer skips by design
+  (`t_ignore` rules) give no issue; their glyphs are still `unattributed`
+  (UP-AL-7).
 - **UP-CV-5** Converter exceptions are caught per run: the run's raw text is
   output, an issue `converter_error` is raised, processing continues.
 
@@ -348,11 +365,22 @@ is what R does), so layout has two levels.
     glyph in the PDF is **never** removed by J2.
   Each join is recorded on the word (`joined_from: [w1, w2]`, `join_rule`) and
   as an issue `joined_words`. `--no-join` gives the unjoined words.
+  *[M2]* J1 applies only where the next word's first character is known to
+  be in logical order: its run was converted, or repaired (rule 1), or its
+  map is sound (rule 4 "sound map"), or it is ActualText. An unconverted
+  font can give its glyphs in visual order, where a word does begin with ि:
+  on the Lohit-Devanagari corpus PDF J1 joined `भोपाल,` + `िदनांक`. The
+  record is `join_rules` (one rule per removed space). A row-merge boundary
+  counts as a space for J1 (never for J2).
 - **UP-LY-6** Measured on `202606122029536001.pdf`: every space in it is a
   real glyph (none `synthetic`), and R keeps `फुले` whole all 46 times. The
   `फु ले` split seen earlier came from cidpdf's gap-based word splitting, which
   is not carried over. J2 is aimed at the `रे लवे` case of indic2unicode's
   README; the M2 corpus must contain such a document, or J2 is left disabled.
+  *[M2]* **J2 is off by default.** The corpus has 83 synthetic spaces (in 2
+  PDFs) and every one is a real word gap: gap / size 0.151–0.621, the
+  smallest ones in an OCR text layer. No document splits a word at a
+  generated space. `--j2 RATIO` (`j2=`) turns it on.
 - **UP-LY-7** Reading order: pages in order; rows top-to-bottom in MuPDF block
   order; no column detection in v1.
 
@@ -496,8 +524,14 @@ joined with `\n`, blocks with `\n\n`. (This is `read_pdf.py` with its
      whitespace) after applying unipdf's recorded joins to R — i.e. the only
      differences allowed are whitespace, and joins listed in `joined_words`.
   Line breaks may differ from R (visual rows, UP-LY-2); words may not.
+  *[M2]* With `rawdict_lines` the words are compared in order. With visual
+  rows they are compared as a multiset per page: a row orders its lines left
+  to right, and MuPDF does not always list them so (one OCR-layer page of the
+  corpus). D-18's runs are compared on raw text, and R's words take unipdf's
+  text for them.
 - **UP-VF-4a** `unipdf text --no-join --rawdict-lines` reproduces R's text
-  byte for byte, so R itself stays checkable.
+  byte for byte, so R itself stays checkable. *[M2]* With
+  `--convert-actual-text` (D-18).
 
 ### 7.3 Geometry and attributes
 
@@ -555,7 +589,7 @@ joined with `\n`, blocks with `\n\n`. (This is `read_pdf.py` with its
 ## 11. Open questions
 
 Resolved: OQ-1 → D-8, OQ-2 → D-9, OQ-3 → D-10, OQ-4 → D-11, OQ-5 → D-14,
-OQ-6 → D-12, OQ-7 → D-13.
+OQ-6 → D-12, OQ-7 → D-13, OQ-8 → D-17, OQ-9 → D-18.
 
 **OQ-8 → D-17** (decided 2026-10-16: option (a) for v1, input adapters later). *[M0]* Legacy 8-bit fonts named `DVB-TTSurekh`, `DVB-TTSurekhEN`,
 `DVB-TTYogesh` (and their `,Bold` / `+1` variants) occur in the corpus. No
@@ -572,7 +606,7 @@ for `शासन`, `विभाा` for `विभाग`). PyMuPDF delivers s
 characters (e.g. U+2212) than the converter's testdata uses, so a plain alias
 would produce plausible but wrong text. (b) needs an input-mapping adapter
 per font and a corpus check; it is a post-v1 item.
-**OQ-9** *[M1]* `/ActualText` and converters. In an ActualText span PyMuPDF
+**OQ-9 → D-18** (decided 2026-10-16: option (b), implemented in M2). *[M1]* `/ActualText` and converters. In an ActualText span PyMuPDF
 returns the replacement text, which is already logical-order Unicode (UP-EX-7).
 R still runs the font's converter over it. For a repaired font that means a
 reordering pass over correct text: Google Docs `Hindi-Google.pdf` comes out
