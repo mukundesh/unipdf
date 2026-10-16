@@ -11,8 +11,8 @@ from test_i2u_regression import DATA, DEVANAGARI, read
 from unipdf.convert.provenance import provenance_level, tracked_to_unicode
 from unipdf.i2u.fontconv import FontConv
 
-# converters that override to_unicode with no adapter yet: run-level provenance
-RUN_LEVEL = {"abhishek"}
+# converters that override to_unicode with no adapter: run-level provenance
+RUN_LEVEL: set[str] = set()
 # testdata of several MB whose lexing alone takes seconds; the whole-file test
 # already covers their text
 BIG = {"aryan2", "surekh"}

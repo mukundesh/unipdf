@@ -20,6 +20,7 @@ from collections.abc import Callable
 from unipdf.i2u.fonts.basefont import LITERAL, BaseFont
 from unipdf.i2u.fonts.glyphs.arialuni_glyphs import ArialUniGlyphs
 from unipdf.i2u.fonts.hindi.chanakya import Chanakya
+from unipdf.i2u.fonts.marathi.abhishek import Abhishek
 from unipdf.i2u.fonts.marathi.sakal import Sakal
 
 Sources = tuple[int, ...]
@@ -171,10 +172,29 @@ def _arialuni_glyphs(font: ArialUniGlyphs, data: str) -> Pieces:
     return out
 
 
+def _abhishek(font: Abhishek, data: str) -> Pieces:
+    """its own pipeline: drop SPACER tokens, then the second copy of a token
+    two glyphs share. The copy's glyph is part of the character it repeats,
+    so its sources join the kept token's"""
+    pairs = [p for p in tokenize(font, data) if p[0] != "SPACER"]
+    tokens = [t for t, _ in pairs]
+    out: list = []
+    out_src: list[set[int]] = []
+    for i, (t, src) in enumerate(pairs):
+        if out and out[-1] == t and font.is_second_copy(out, tokens, i):
+            out_src[-1].update(src)
+            continue
+        out.append(t)
+        out_src.append(set(src))
+    return tokens_to_unicode(font, [(t, tuple(sorted(s))) for t, s in zip(out, out_src,
+                                                                          strict=True)])
+
+
 ADAPTERS: list[tuple[type, Callable[..., Pieces]]] = [
     (Sakal, _sakal),
     (Chanakya, _chanakya),
     (ArialUniGlyphs, _arialuni_glyphs),
+    (Abhishek, _abhishek),
 ]
 
 

@@ -1,6 +1,6 @@
 about: UP-VF-3 parity corpus; built by tools/build_corpus.py pick
 copied: true
-total_bytes: 22395455
+total_bytes: 22836042
 gaps:
   chanakya: 0 PDF(s) found under the scanned roots
   aryan2: 0 PDF(s) found under the scanned roots
@@ -388,3 +388,20 @@ pdfs:
   sha256: b19d1b0906a52a6d6dba9b0e1d811e6ac969c05dd6bc29a377c9b324865bee01
   file: pdfs/c023.pdf
   source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahfin/2021-07/202107011459371605.pdf
+- pages: 4
+  size: 440587
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Courier New,Italic
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Times New Roman
+  - Times New Roman,Italic
+  converters:
+  - sakal
+  reasons:
+  - 'attributes: italic font (Times New Roman,Italic) beside Sakal (UP-VF-7)'
+  id: c024
+  sha256: 1816f525dcc38485e6e44ee46e0fe0a6830c0e62fc9c743e6d6b449df3a2f510
+  file: pdfs/c024.pdf
+  source: /Users/mukund/orgpedia/mahfin2/import/documents/202308171510373505.pdf

@@ -24,3 +24,5 @@
   known_bad: "DVB-TTSurekhEN text is left as 8-bit glyph codes (D-17, needs an input adapter)"
 - source: /Users/mukund/orgpedia/mah2024/mahadmin2024/import/documents/202502101825563407.pdf
   reason: DVOT-SurekhMR; widest ink spill past rawdict boxes (SPIKES §3)
+- source: /Users/mukund/orgpedia/mahfin2/import/documents/202308171510373505.pdf
+  reason: 'attributes: italic font (Times New Roman,Italic) beside Sakal (UP-VF-7)'
