@@ -1,0 +1,13 @@
+Absorbed from indic2unicode (Try/indic2unicode/indic2unicode), commit 2cf31cf
+("Fixing macroman formin Krishna font (gujarati)"), via git archive.
+
+Copied: fontconv.py __init__.py fonts/ langs/ LICENSE COPYING README BUGS,
+tools/fix_tounicode.py -> fix_tounicode.py.
+testdata/ and expected/ -> tests/i2u/.
+Not copied: regression.py (ported to tests/test_i2u_regression.py),
+tools/pdf_ocr.py (out of scope), requirements files.
+
+The only edit is the import rewrite (REQUIREMENTS D-16):
+  indic2unicode.tools.fix_tounicode -> unipdf.i2u.fix_tounicode
+  indic2unicode.                    -> unipdf.i2u.
+Check with: tools/check_upstream.sh

@@ -1,0 +1,389 @@
+about: UP-VF-3 parity corpus; built by tools/build_corpus.py pick
+copied: true
+total_bytes: 22395455
+gaps:
+  chanakya: 0 PDF(s) found under the scanned roots
+  aryan2: 0 PDF(s) found under the scanned roots
+  surekh: 0 PDF(s) found under the scanned roots
+  abhishek: 0 PDF(s) found under the scanned roots
+  arialuni: only reached with repair off (rule 3); R always repairs
+  nirmalaui: only reached with repair off (rule 3); R always repairs
+  sakal_both_numberings: none of 60 Sakal PDFs carries private-use codes (nor 400 sampled in M1); the
+    two numberings are covered by tests/i2u/testdata/sakal only
+pdfs:
+- pages: 4
+  size: 455559
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Arial Unicode MS
+  - ABCDEE+Calibri
+  - ABCDEE+Mangal
+  - ABCDEE+Sakal Marathi
+  - Arial
+  converters:
+  - arialuni_glyphs
+  - sakal
+  reasons:
+  - cidpdf's sample; Sakal fill+stroke synthetic bold
+  id: c001
+  sha256: 0f93067d5d1f2fdc9c77c474d95289060042e2234d2534de8e4d680d457aaaa4
+  file: pdfs/c001.pdf
+  source: /Users/mukund/orgpedia/CID_Glyphs/sample.pdf
+- pages: 5
+  size: 164327
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Sakal Marathi
+  - Arial
+  converters:
+  - dvotsurekh
+  - sakal
+  reasons:
+  - sample PDF of the project; Sakal; signature text pdfium drops
+  id: c002
+  sha256: 9c1ad6acb1ff2a98730c1f3f9e9ece50466d48a5d42aee28d9d5f79ad16284dc
+  file: pdfs/c002.pdf
+  source: /Users/mukund/orgpedia/Try/indic2unicode/202606122029536001.pdf
+- pages: 1
+  size: 15251
+  producer: Skia/PDF m153 Google Docs Renderer
+  fonts:
+  - AAAAAA+Mangal
+  - BAAAAA+ArialMT
+  converters:
+  - mangal_glyphs
+  reasons:
+  - Google Docs Mangal, repaired, with ActualText
+  known_bad: 'हंिदी for हिंदी: mangal_glyphs reorders ActualText that is already logical (OQ-9)'
+  id: c003
+  sha256: 37e7bf106c13fbdd8d07d4d1905195478c5e7c42523f73f313949bd27dd136d7
+  file: pdfs/c003.pdf
+  source: /Users/mukund/orgpedia/Try/playa/Hindi-Google.pdf
+- pages: 1
+  size: 28304
+  producer: Microsoft® Word for Microsoft 365
+  fonts:
+  - BCDEEE+NirmalaUI
+  - BCDFEE+Aptos
+  converters:
+  - nirmalaui_glyphs
+  reasons:
+  - Word 365 cloud export
+  id: c004
+  sha256: dcf0039c243d7ff48b13bcf849f49241402d21ab2a8d7bdb13f2e0053bf4ec8f
+  file: pdfs/c004.pdf
+  source: /Users/mukund/orgpedia/Try/playa/Hindi-Word365Cloud.pdf
+- pages: 1
+  size: 28304
+  producer: Microsoft® Word for Microsoft 365
+  fonts:
+  - BCDEEE+NirmalaUI
+  - BCDFEE+Aptos
+  converters:
+  - nirmalaui_glyphs
+  reasons:
+  - Word desktop export, Nirmala UI
+  id: c005
+  sha256: dcf0039c243d7ff48b13bcf849f49241402d21ab2a8d7bdb13f2e0053bf4ec8f
+  file: pdfs/c005.pdf
+  source: /Users/mukund/orgpedia/Try/playa/Hindi-WordDesktop.pdf
+- pages: 1
+  size: 123823
+  producer: iLovePDF
+  fonts:
+  - AOYIUM+TimesNewRomanPSMT
+  - APNUFY+TimesNewRomanPS-BoldMT
+  - AQTTQI+NirmalaUI
+  - BJSMRO+NirmalaUI-Bold
+  converters: []
+  reasons:
+  - Word export, Nirmala UI with ActualText and a sound map (resolve.py sound-map rule)
+  id: c006
+  sha256: 6f5a40add907c17e28767410d9725b5f24b91047b3a32b55cce887a5783aa0a4
+  file: pdfs/c006.pdf
+  source: /Users/mukund/orgpedia/indicGovBench/benchmark3/pdfs/order_en_current_021.pdf
+- pages: 1
+  size: 37345
+  producer: PDFium
+  fonts:
+  - AAAAEW+Mangal-Regular
+  - DejaVuSans
+  - DejaVuSans-Bold
+  - Lohit-Devanagari
+  - NimbusSans-Regular
+  converters: []
+  reasons:
+  - Mangal-Regular and Lohit-Devanagari; U+FFFD glyphs in texttrace
+  known_bad: "Lohit-Devanagari (PDFium-produced) has no indic2unicode converter: text stays in visual\
+    \ order with control characters (िदनांक, पृ.\x18मांक)"
+  id: c007
+  sha256: 24488ef8f17b91f815940146a449009463f0a956c0c3dbd48d65b0019f6c73ed
+  file: pdfs/c007.pdf
+  source: /Users/mukund/orgpedia/indicGovBench/benchmark3/pdfs/order_hi_current_039.pdf
+- pages: 1
+  size: 237132
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+DVOT-SurekhMR
+  - ABCDEE+DVOT-SurekhMR,Bold
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Times New Roman
+  converters:
+  - dvotsurekh
+  - sakal
+  reasons:
+  - DVOT-SurekhMR; widest ink spill past rawdict boxes (SPIKES §3)
+  id: c008
+  sha256: df7f21c6be98fb4e7b35b09bb027ce0ffc97c3cb12b96ddf2c9db5201b08b91c
+  file: pdfs/c008.pdf
+  source: /Users/mukund/orgpedia/mah2024/mahadmin2024/import/documents/202502101825563407.pdf
+- pages: 4
+  size: 316261
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Arial Unicode MS
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Times New Roman
+  converters:
+  - arialuni_glyphs
+  - sakal
+  reasons:
+  - converter:arialuni_glyphs
+  id: c009
+  sha256: d3c2df0e5b7bfbb001c7ee77959bf17b595f2d4d92c12be82bccaa34ad3a7c33
+  file: pdfs/c009.pdf
+  source: /Users/mukund/orgpedia/mah2024/mahagri2024/flow/writeTxt_/input/202503211606505801.pdf
+- pages: 5
+  size: 357276
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Cambria,Bold
+  - ABCDEE+DVOT-SurekhMR
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Times New Roman
+  converters:
+  - dvotsurekh
+  - sakal
+  reasons:
+  - converter:dvotsurekh
+  id: c010
+  sha256: 626dedf80de9ce24df29182447272bda79c7e2e08edf70fc5e9ef3696f341ddd
+  file: pdfs/c010.pdf
+  source: /Users/mukund/orgpedia/mah2024/mahbah2024/import/documents/202402261831154234.pdf
+- pages: 2
+  size: 42932
+  producer: Acrobat Distiller 5.0.5 (Windows)
+  fonts:
+  - FCJJAN+DVB-TTYogesh,Bold+1
+  - FCJJBI+DVB-TTYogesh,Bold
+  - FCJJPG+DVB-TTYogesh+1
+  - FCJJPH+DVB-TTYogesh
+  converters: []
+  reasons:
+  - legacy DVB-TTYogesh, unconverted in v1 (D-17)
+  known_bad: DVB-TTYogesh text is left as 8-bit glyph codes (D-17, needs an input adapter)
+  id: c011
+  sha256: e4cfa9cf3c552e6aaf691f12b2f8f91676a0d9a009e8c93206a0c092254776b5
+  file: pdfs/c011.pdf
+  source: /Users/mukund/orgpedia/mahfin2/import/documents/20040812163004001.pdf
+- pages: 2
+  size: 64810
+  producer: Acrobat 5.0 Scan Plug-in for Windows
+  fonts: []
+  converters: []
+  reasons:
+  - scanned
+  id: c012
+  sha256: c5504a42e703a46568f5a57d9aa2c803610c2f8d7a90be7c050ea06eeafe86a6
+  file: pdfs/c012.pdf
+  source: /Users/mukund/orgpedia/mahfin2/import/documents/20051209153227001.pdf
+- pages: 2
+  size: 114325
+  producer: Acrobat 5.0 Scan Plug-in for Windows
+  fonts: []
+  converters: []
+  reasons:
+  - scanned
+  id: c013
+  sha256: ab91c7f149f9c8757665286ec5e0b0d3d748701456517239709114e95e415f77
+  file: pdfs/c013.pdf
+  source: /Users/mukund/orgpedia/mahfin2/import/documents/20070314164145001.pdf
+- pages: 3
+  size: 3438106
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Calibri Light
+  - ABCDEE+Courier New
+  - ABCDEE+Mangal
+  - ABCDEE+Sakal Marathi
+  - Times New Roman
+  - Times New Roman,Bold
+  converters:
+  - sakal
+  reasons:
+  - legacy DVB-TTSurekhEN beside Sakal and Mangal (D-17)
+  known_bad: DVB-TTSurekhEN text is left as 8-bit glyph codes (D-17, needs an input adapter)
+  id: c014
+  sha256: e37f0a893b9eb46eb847c455f822b70666594bac9f30a3effa86bc8d259b5bf0
+  file: pdfs/c014.pdf
+  source: /Users/mukund/orgpedia/mahfin2/import/documents/201809121214439505.pdf
+- pages: 4
+  size: 908935
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Arial Unicode MS
+  - ABCDEE+DVBW-TTYogeshEN
+  - ABCDEE+Mangal
+  - ABCDEE+Nirmala UI,Bold
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Arial,Bold
+  converters:
+  - arialuni_glyphs
+  - mangal_glyphs
+  - nirmalaui_glyphs
+  - sakal
+  - yogesh
+  reasons:
+  - converter:nirmalaui_glyphs
+  id: c015
+  sha256: 645c0cf1255daa17a4a821b79b190ff9eef7b72fc6976261c672e6627fe4f270
+  file: pdfs/c015.pdf
+  source: /Users/mukund/orgpedia/mahfin2/import/documents/202303271202410105.pdf
+- pages: 4
+  size: 172431
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Mangal,Bold
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Arial,Bold
+  converters:
+  - mangal_glyphs
+  - sakal
+  reasons:
+  - converter:mangal_glyphs
+  id: c016
+  sha256: 9e3702ef962308983e89839d6ab8437e62a8c9cf1bb79d6bf5b1bf4c0382536a
+  file: pdfs/c016.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahagri/2015-03/201503161759038101.pdf
+- pages: 2
+  size: 138166
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+DVOT-SurekhMR
+  - ABCDEE+Sakal Marathi
+  - Arial
+  converters:
+  - dvotsurekh
+  - sakal
+  reasons:
+  - converter:dvotsurekh
+  id: c017
+  sha256: 5d5ed3deeadd3249e527531125780c073ea1711e867e1c57f64679a11a79dd31
+  file: pdfs/c017.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahagri/2016-02/201602201108451401.pdf
+- pages: 3
+  size: 3311101
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Mangal
+  - ABCDEE+Sakal Marathi
+  - Arial
+  converters:
+  - arialuni_glyphs
+  - sakal
+  reasons:
+  - converter:sakal
+  - signed
+  - word_export
+  id: c018
+  sha256: 69f94808f462e13f4f70ce61b119dbc9177253f6bf0b9bb333129c174525d4a8
+  file: pdfs/c018.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahagri/2018-11/201811161801018501.pdf
+- pages: 2
+  size: 3379976
+  producer: Microsoft® Word 2010
+  fonts:
+  - ABCDEE+Nirmala UI
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Arial,Bold
+  - Times New Roman
+  converters:
+  - nirmalaui_glyphs
+  - sakal
+  reasons:
+  - converter:nirmalaui_glyphs
+  id: c019
+  sha256: 9d307200d05b800eee81b385e5559cc3acca8a45e1d9efaecb7c1f9647817bc1
+  file: pdfs/c019.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahagri/2020-07/202007171342247401.pdf
+- pages: 13
+  size: 1578961
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Mangal
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Arial,Bold
+  converters:
+  - sakal
+  reasons:
+  - converter:sakal
+  - mixed_hindi_english
+  id: c020
+  sha256: 4fdf08f70bc10b064e4e77614f8ac638a3faf412613a2c6c0d90a282f059efd2
+  file: pdfs/c020.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahfin/2014-03/201403141452037705.pdf
+- pages: 14
+  size: 2970594
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Mangal
+  - ABCDEE+Sakal Marathi
+  - Arial
+  - Arial,Bold
+  converters:
+  - mangal_glyphs
+  - sakal
+  reasons:
+  - converter:mangal_glyphs
+  id: c021
+  sha256: 7b5fa9781268a8a66f0f5e426123b20a119ef5d125ea7191720abeff5f5f3ce6
+  file: pdfs/c021.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahfin/2017-02/201702031059094305.pdf
+- pages: 5
+  size: 1783239
+  producer: SAMBox 1.0.41.RELEASE (www.sejda.org)
+  fonts:
+  - ABCDEE+Calibri
+  - ABCDEE+DVBW-TTYogesh
+  - ABCDEE+Sakal Marathi
+  converters:
+  - sakal
+  - yogesh
+  reasons:
+  - converter:yogesh
+  id: c022
+  sha256: 18239bced9a7768a01d899e995b56e655291343c5a78f5712628ad820e122552
+  file: pdfs/c022.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahfin/2017-02/201702091712585805.pdf
+- pages: 10
+  size: 2728297
+  producer: Microsoft® Word 2013
+  fonts:
+  - ABCDEE+Sakal Marathi
+  - Times New Roman
+  converters:
+  - arialuni_glyphs
+  - sakal
+  reasons:
+  - mixed_hindi_english
+  id: c023
+  sha256: b19d1b0906a52a6d6dba9b0e1d811e6ac969c05dd6bc29a377c9b324865bee01
+  file: pdfs/c023.pdf
+  source: /Users/mukund/orgpedia/mahgetNewGRs/LFS/mahGRs/pdfs/mahfin/2021-07/202107011459371605.pdf

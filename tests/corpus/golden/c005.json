@@ -1,0 +1,1 @@
+{"path": "pdfs/c005.pdf", "repaired": {"NirmalaUI": "NirmalaUI"}, "pages": [{"number": 0, "blocks": [[{"runs": [{"font": "NirmalaUI", "converter": "nirmalaui_glyphs", "rule": 1, "raw": "िहंदी", "text": "हिंदी", "error": null}, {"font": "Aptos", "converter": null, "rule": 4, "raw": " ", "text": " ", "error": null}]}]]}]}

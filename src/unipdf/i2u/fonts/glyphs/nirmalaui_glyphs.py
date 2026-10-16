@@ -1,0 +1,62 @@
+from .arialuni_glyphs import ArialUniGlyphs
+from ..kannada.nirmalaui import NirmalaUIKannadaGlyphs
+from ..odiya.nirmalaui import NirmalaUIOdiyaGlyphs
+from ..telugu.nirmalaui import NirmalaUITeluguGlyphs
+from ..malayalam.nirmalaui import NirmalaUIMalayalamGlyphs
+
+class NirmalaUIGlyphs(ArialUniGlyphs):
+    '''The text of a pdf set in Nirmala UI whose ToUnicode map has been
+       repaired by tools/fix_tounicode.py. Every glyph now carries the
+       characters it really stands for, ka and sha and matra_i included, and
+       the conjuncts and the matra_o that the broken map dropped are back,
+       so nothing of the text is lost any more - unlike fonts/hindi/nirmalaui.py,
+       which works on the text of a pdf whose map is still broken.
+
+       What is left is the order: the glyphs are stored in the order in
+       which they are drawn, so matra_i sits in front of the cluster it
+       belongs to and the reph behind the whole syllable it sits on, e.g.
+       निर्देशांक comes out as िनदेर्शांक and निकटवर्ती as िनकटवतीर्. That is
+       the same order Arial Unicode MS draws in and the same two passes put
+       it right, so this font is that one.
+
+       Nirmala UI spells out what Arial Unicode MS carries as a glyph of its
+       own - a half form comes out as its consonant and a halant and a rakar
+       as a halant and a ra, rather than as one character - but the lexer
+       reads a half form out of that pair anyway, so a matra_i still waits
+       over the whole cluster: 'ि' + 'क' + '्र' is read as matra_i, half ka,
+       ra and comes out as क्रि.
+
+       THE OTHER SCRIPTS OF THE SAME FONT
+
+       Nirmala UI sets the Karnataka gazette as well, and the kannada of it
+       goes through fonts/kannada/nirmalaui.py - the same split on the script
+       that Arial Unicode MS does, since the font is one font and
+       get_font_converter() names one converter for it. That pass is the
+       kannada pass of Arial Unicode MS whole: the two fonts draw a kannada
+       syllable in a different number of glyphs but in the same order, and it
+       is the repair and not the reordering that the difference is in.
+
+       It sets the Odisha Gazette too, and the odiya of it goes through
+       fonts/odiya/nirmalaui.py, which is a pass of its own rather than one
+       of these two: odiya draws ୋ, ୈ and ୌ in front of the letter they
+       belong to and in two pieces, and its reph behind the letter it sits
+       on, so ଘୋଷଣା comes out of the repaired pdf as େଘାଷଣା and ସର୍ବ as ସବର୍.
+
+       And it sets the Andhra Pradesh gazette, whose telugu goes through
+       fonts/telugu/nirmalaui.py - a pass of its own again, telugu drawing
+       the mark of a syllable on the body of it with the vattus hanging
+       under that body, so that ముగుస్తుంది comes out of the repaired pdf as
+       ముగుసు్తంది. That one is fonts/telugu/nats.py, which reads the other
+       telugu of the same gazette, with the vattu of ra that this font draws
+       in front of its letter added: ప్రభుత్వం comes out as ్రపభుత్వం.
+
+       And the Kerala gazette, whose malayalam goes through
+       fonts/malayalam/nirmalaui.py. That one is fonts/malayalam/meera.py,
+       which reads the Meera of the same gazette, with the ്ര that this font
+       draws in front of its letter added: കേരള comes out of the repaired
+       pdf as േകരള and പ്രവർത്തനം as ്രപവർത്തനം.
+    '''
+    kannadaclass   = NirmalaUIKannadaGlyphs
+    odiyaclass     = NirmalaUIOdiyaGlyphs
+    teluguclass    = NirmalaUITeluguGlyphs
+    malayalamclass = NirmalaUIMalayalamGlyphs

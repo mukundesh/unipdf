@@ -1,0 +1,1 @@
+{"path": "pdfs/c003.pdf", "repaired": {"Mangal": "Mangal"}, "pages": [{"number": 0, "blocks": [[{"runs": [{"font": "Mangal", "converter": "mangal_glyphs", "rule": 1, "raw": "हिंदी", "text": "हंिदी", "error": null}, {"font": "ArialMT", "converter": null, "rule": 4, "raw": " ", "text": " ", "error": null}]}]]}]}

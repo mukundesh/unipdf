@@ -1,0 +1,415 @@
+Avaiable under Creative Commons Share Alike (CC SA) Licence 
+
+USAGE:    
+    python fontconv.py [-e encoding] -f fontname input_file output_file
+    default encoding is utf8
+INTRODUCTION
+
+In India, a large number of data sources like vernacular newspapers, magazine,
+loksabha website use proprietory fonts for displaying content in Indian
+languages. The proprietory fonts overload normal unicode values with language
+specific characters. 
+
+While proprietory fonts enable content providers to display data in Indian
+languages, they make document processing like extracting entities, searching
+with in the document very difficult.
+
+Unicode provides codepoints for all scripts and is accepted widely. Therefore,
+documents in unicode can be easily processed, indexed and searched.
+
+
+indic2unicode converts data in proprietory fonts to unicode. It currently
+supports Aryan2, Divya and Surekh fonts for devanagari script that is used by
+the LokSabha website for publishing debates. It also supports Chanakya, the
+ascii font of the Kruti Dev/DevLys family that the Gazette of India is
+published in, and Arial Unicode MS as well as Nirmala UI as they come out of
+the Gazette pdfs that are set in them. Beyond devanagari it supports three
+kannada fonts that the Karnataka gazette is published in, Tunga, which is a
+unicode font, and Nudi and Aklite, which are 8-bit ones, as they come out of
+those pdfs, and the kannada of Arial Unicode MS and of Nirmala UI as it comes
+out of the Karnataka gazettes that are set in them.
+
+MAIN IDEA
+
+The main idea is to tokenize the input text in a given font and then use the
+unicode values of those tokens to get the unicode equivalent. 
+
+Unicode values of tokens is specified in langs/* and the regular expression to
+identify the tokens is specified in fonts/*.
+
+For tokenization purpose, I use a pure python implementation of lex-yacc namely
+<a href="http://www.dabeaz.com/ply/ply.html">ply</a>. I only use the lexing
+facility provided by the module.
+
+RE-ORDERING TOKENS
+
+Tokens obtained after tokenization may not be in the right order as there are
+language specific rules. For example, in Aryan font Matra_I will appear before
+KA because of visual correctness. However, unicode requires that KA should be
+followed by MATRA_I rather than preceded by it.
+
+So the tokens obtained after tokenization needs to be reordered.
+fonts/basefont.py implements three ways of reordering tokens in the following
+order:
+
+1. Compose tokens: This is used for composing multiple tokens into one that
+cannot be unambiguously composed during tokenization phase. For example,  In
+font specific file, create a dictionary ans assign it to self.composeTokens.In
+fonts/hindi/aryan2,py it is specified as  self.composeTokens = {('A', 'MATRA_AA') :
+'AA'}. The key is a tuple of n-tokens and the output is one token.
+
+2. Move a token before: A token can be moved backwards in the series of tokens.
+For example, fonts/hindi/aryan2.py specifies self.jumpbefore = {'ADHA_RA': 1}
+indicating the ADHA_RA should jump one place before.
+
+3. Move a token ahead: A token can be moved ahead in the series of tokens. For
+example, fonts/hindi/aryan2.py specifies self.waitdict = {'MATRA_I': 1, 'MATRAIBINDU'
+: 1, 'MATRAIBINDU2': 1, 'MATRA_I2': 2} indicating tokens MATRA_I, MATRAIBINDU
+and MATRAIBINDU2 should jump 1 step head and token MATRA_I2 should jump two
+positions ahead.
+
+TOKENS THAT ARE NOT A STEP
+
+In a font like Chanakya the distance a token has to travel is not fixed
+because a syllable is made of a variable number of tokens. Three sets tell
+the two reordering passes which tokens are not to be counted as a step:
+
+1. self.jumpover: tokens that a backward jumping token is not counted
+against. fonts/hindi/chanakya.py puts all the matras and the signs in it because
+the reph is typed after the whole syllable it sits on, so it has to travel
+past 'ी' in वर्ती as well as past 'ा' in अर्थात्.
+
+2. self.waitover: tokens that a forward jumping token is not counted against
+and that it stays behind. fonts/hindi/chanakya.py puts NUKTA, RAKAR and YAKAR in
+it since they belong to the syllable that matra_i has already passed, as in
+चिड़िया and प्रिय.
+
+3. self.halftokens: tokens that a forward jumping token is not counted
+against but that it is emitted before, since they are the head of the
+syllable that is still coming. fonts/hindi/chanakya.py puts all the half
+consonants in it, which is what makes पश्चिम come out of if"pe while दिल्ली
+comes out of fnYyh.
+
+A UNICODE FONT THAT NEEDS THE SAME TREATMENT
+
+Arial Unicode MS is a unicode font, but the Gazette pdfs that are set in it
+carry a broken ToUnicode map: the map holds all the right strings, it just
+hands them to the wrong glyphs. The text that comes out of such a pdf is
+therefore devanagari that is in the visual order of the glyphs and that is
+spelled with the wrong characters for a part of the alphabet, e.g. निर्माण
+comes out as जिमावण, where 'ज' is matra_i, 'ि' is na and 'व' is the reph.
+
+fonts/hindi/arialuni.py treats every glyph of that font as a token in exactly the
+way the ascii fonts are treated, and the two reordering passes above put
+matra_i and the reph back where unicode wants them.
+
+The map cannot be inverted completely. The font has one glyph of matra_i per
+width of the syllable that follows it and one glyph of the reph per width of
+the syllable it sits on, and the broken map hands those strings to more than
+one consonant each: ja, na, pha, sha, ksha and the conjunct bra all come out
+as 'ि', and va as well as tha come out as 'र्'. Neither group can be told
+apart any more, so 'ि' is read as na and 'र्' is read as va, the most common
+member of each. In the same way a nukta is lost, ड़ comes out as plain ड.
+
+Where the syllable that follows tells the two apart, composeTokens is used to
+pick the right one. The half sa is handed the string of the half sta, so both
+of them come out as 'स्ट्': the one that a full consonant follows is the half
+sa of स्टेशनों, while the one that ra follows is the half sta of रजिस्ट्री.
+
+The pdf extraction also puts a space in the middle of a word every now and
+then, e.g. रेलवे comes out as 'रे लवे'. That is not a glyph of the font and a
+converter cannot tell such a space from a real one, so it is left alone.
+
+REPAIRING THE PDF INSTEAD
+
+None of that guessing is needed if the pdf itself is at hand. The glyphs of
+the page are drawn from their glyph ids and the ToUnicode map is not looked
+at while drawing, so the page is right and only its extraction is wrong. The
+map was built by pairing the glyphs of a run with the characters of that run
+one by one, and devanagari shaping moves matra_i to the left of its cluster
+and the reph to the right of its syllable, so the pairing slips exactly on
+the glyphs that were moved.
+
+tools/fix_tounicode.py builds the map again out of the font program that the
+pdf carries, which says what its glyphs are three times over: the cmap of the
+subset maps a character to the glyph that draws it, the subset keeps the
+uniXXXX name of the glyphs it did not have to rename, and the GSUB of the
+font says which glyphs the shaper made out of which other ones, so a conjunct
+is spelled out of the glyphs it was made of, a half form comes out as its
+consonant and a halant and a below base form as a halant and its consonant.
+A glyph that a subset carries neither a name nor a cmap entry nor a rule for
+is filled in from another subset of the same font in the same document, which
+is where the glyph id of a font one subset drops and another keeps - the
+halant of "Nirmala UI,Bold" among them - is found, and what is left after
+that is repaired from a table. It only touches the fonts that are known to
+carry a broken map. After that the text can be extracted in the usual way:
+
+    doc = pymupdf.open(pdffile)
+    ToUnicodeFixer().fix_document(doc)
+    text = doc[pagenum].get_text()
+
+The text that comes out is still in the visual order of the glyphs, so it
+goes through fonts/glyphs/arialuni_glyphs.py, which does nothing but the two
+reordering passes. Unlike the arialuni font above, that path loses nothing:
+ja, na, pha, sha and ksha are all still there, and so are va, tha and the
+nuktas.
+
+A bar in the middle of a devanagari word, e.g. द|शरथी, is not a glyph that
+was mapped wrong. The gazette itself types a bar where a matra_aa belongs
+and the page shows a bar, so it is left as it is.
+
+ANOTHER UNICODE FONT WITH THE SAME BROKEN MAP
+
+Nirmala UI is the other unicode font the Gazette is set in, and its pdfs
+carry a map that was broken in the very same way. Which glyph ends up with
+which string differs from document to document, because it depends on the
+first cluster of the document that each glyph was drawn in, so the font needs
+a converter of its own: fonts/hindi/nirmalaui.py. There, दिल्ली comes out as कदल्ली
+and के comes out as िे, i.e. 'क' is matra_i and 'ि' is ka.
+
+The losses are of the same kind as the ones above. ka and sha, and the
+conjunct shcha as well, all come out as 'ि', which is read as ka. The reph is
+drawn together with the matra of its syllable, so it comes out as 'ा', 'ी',
+'ो' or as nothing at all, and only the reph over a matra_aa can be found
+again, by the 'ाा' that कार्यालय leaves behind as िायाा लय. matra_o is handed
+no string at all and comes out as the space of its own advance, so को is left
+as 'ि' and only the matra_o of a plural ending can be brought back, from the
+'ों' that the anusvara behind it carries.
+
+composeTokens does the same work here as it does for Arial Unicode MS. The
+three matra_i glyphs of the font carry the strings of ka, of ra and of the
+conjunct kta, so a ra in front of ra is a matra (रिज comes out as ररज) and so
+is a kta in front of kta (व्यक्ति comes out as व्यक्तक्त). The sta ligature
+carries the string of the half sa, so a 'स्' that a matra follows is that
+ligature and its ta is put back, which is what turns हस्ाों तररत back into
+हस्तांतरित, while a 'स्' that a consonant follows is the half sa of स्थान.
+
+Here too none of that guessing is needed when the pdf itself is at hand.
+tools/fix_tounicode.py repairs a Nirmala UI pdf the same way it repairs an
+Arial Unicode MS one, and the text of it goes through
+fonts/glyphs/nirmalaui_glyphs.py, which is the same two reordering passes and loses
+nothing: sha and matra_o and the reph are all still there, so प्रकाशित and को
+and सर्वोच्च come out whole rather than as प्रकाकित and क and सवोच्च.
+
+Nirmala UI spells out as two characters what Arial Unicode MS carries as one
+glyph - a half form comes out as its consonant and a halant, a rakar as a
+halant and a ra - but the lexer reads a half form out of that pair anyway, so
+matra_i still waits for the whole cluster and 'ि' + 'क' + '्र' comes out as
+क्रि. The reph is drawn together with the matra of the syllable it sits on,
+which is one glyph of the font and two characters of the repaired map, and
+the matra is one of the tokens the reph jumps over on its way back, so
+निकटवर्ती is drawn as िनकटवतीर् and comes out whole all the same.
+
+Nirmala UI sets the Karnataka gazette as well, and the kannada of a repaired
+one goes through fonts/kannada/nirmalaui.py - the same split on the script
+that Arial Unicode MS does, the font being one font. The subset of it that
+those pdfs carry keeps neither a cmap nor a post nor a GSUB, so there is
+nothing in the font to read a glyph out of and its map is short rather than
+wrong: it names the letters of the block and stops, and every glyph the
+shaper made extracts as (cid:3197) and the like. Those glyphs are put back
+from NIRMALA_UI_KANNADA in tools/fix_tounicode.py, which is a table of the
+blocks the font lays them out in - the vattus from 3161, then fifteen glyphs
+per consonant from 3197, one for the consonant with each of the twelve vowel
+signs and one each for it with the anusvara, the visarga and its virama.
+
+What is left after that is the order, and there Nirmala UI draws kannada the
+way Arial Unicode MS draws it, so fonts/kannada/nirmalaui.py is that pass
+whole: ಕರ್ನಾಟಕ comes out of the repaired pdf as ಕನಾರ್ಟಕ and ಅನುಸೂಚಿಯಲ್ಲಿ as
+ಅನುಸೂಚಿಯಲಿ್ಲ, exactly as they do there. The two fonts draw a syllable in a
+different number of glyphs - a whole matra is drawn into the letter here, ಕೇ
+being one glyph where Arial Unicode MS draws ಕಿ and a length mark, and ಕ್ಷ is
+spelled out rather than drawn whole - but that is a difference in what the
+repair writes and not in the order it writes it in.
+
+
+
+A KANNADA FONT WHOSE MAP IS SOUND AND WHOSE ORDER IS NOT
+
+Tunga is the unicode kannada font that the Karnataka gazette is published
+in, and the pdfs that are set in it carry a ToUnicode map that is nearly
+sound: every glyph carries the characters it stands for. What is wrong with
+the text is the order, because the glyphs are stored in the order in which
+they are drawn and kannada draws a syllable as
+
+    base [first half of the matra] vattu(s) [length mark] [anusvara]
+
+while unicode wants the base, the vattus and then the whole matra. So a
+vattu comes out behind the matra of its syllable and spelled the other way
+round, the consonant before the virama rather than after it, and ಪ್ರಸ್ತಾವನೆ
+comes out as ಪರ್ಸಾತ್ವನೆ and ಸಲ್ಲಿಸಿದ as ಸಲಿಲ್ಸಿದ. The arkavattu is drawn on top of
+the syllable it belongs to and is stored behind the whole of it, so ಕರ್ನಾಟಕ
+comes out as ಕನಾರ್ಟಕ and ಸರ್ಕಾರದ as ಸಕಾರ್ರದ, which is the same journey the reph
+of devanagari makes.
+
+A two part matra comes out in its two parts - ೀ as ಿ + ೕ, ೇ as ೆ + ೕ, ೊ as
+ೆ + ೂ - and a vattu of that syllable stands between them, so ಶ್ರೀ comes out
+as ಶಿ + ರ್ + ೕ. Unicode has one character for each of these matras and NFC
+will not compose them, being composition exclusions, so fonts/kannada/tunga.py
+puts the halves back together itself.
+
+fonts/kannada/tunga.py reads every syllable of the text as a whole and writes
+it out again in the order unicode wants, rather than moving single tokens the
+way the devanagari fonts do: the distance a vattu would have to travel is
+not a number of tokens, it is however many matra glyphs its syllable has.
+
+WHAT THE TEXT OF A TUNGA PDF CANNOT SAY
+
+The map spells a vattu as its consonant and a virama, which is exactly what
+a dead consonant at the end of a word looks like, and it hands the
+arkavattu, the vattu of ra and a dead ra the same 'ರ್'. The pdf itself keeps
+all three apart - they are drawn from different glyphs - but the text does
+not, so the font has to guess. A vattu that a length mark follows is a vattu
+(ಶ್ರೀ), a 'C ್' behind a length mark is not a vattu of that syllable, since a
+vattu is drawn before that mark, and is a dead consonant (ಎಂಪ್ಲಾಯೀಸ್, ವೆಲ್ಫೇರ್)
+or the arkavattu of the syllable that follows (ನಿರ್ದೇಶನ), and a 'C ್' that a
+vowel carries is a dead consonant (ಆರ್). Everything else in the middle of a
+word is a vattu, kannada writing every virama between two consonants that
+way, and at the end of a word everything is a vattu but the few consonants
+that a kannada word is written to end with, ಸ ಶ ಥ ನ ಲ - ಎಸ್, ಲೋಕೇಶ್, ಮಂಜುನಾಥ್,
+ಅಸೋಸಿಯೇಷನ್ - while a doubled consonant is a vattu all the same, so ಗಳನ್ನು and
+ರಲ್ಲಿ come out whole.
+
+A 'ರ್' is read as the vattu of ra on the consonants that ra is most often
+written under, ಪ ಫ ಬ ಭ ತ ದ ಗ, and as the arkavattu everywhere else. ಕ takes
+either about as often, and there the matra of the syllable decides, the ರ್ಕ
+of ಸರ್ಕಾರ carrying one and the ಕ್ರ of ಕ್ರಮ not. Both readings are ordinary
+kannada, so what is left of this is a real loss: ಆಶ್ರಯ comes out as ಆರ್ಶಯ and
+ತರ್ಕ as ತಕ್ರ. A word that is written with a dead consonant in the middle,
+which is an english loan every time, is lost the same way: ವೆಲ್ಫೇರ್ comes out
+as ವ್ಲೆಫೇರ್ where the pdf leaves no space between the two halves of it.
+
+WHAT THE EXTRACTOR LOSES BEFORE ANY OF THIS
+
+Tunga draws a consonant and the matra i or the matra o of it in one glyph
+and the maps of these pdfs have no entry at all for a number of those
+ligatures. An extractor that falls back on the cid of a glyph it has no
+string for, e.g. pymupdf, hands them out as the character of that cid, which
+is a latin letter here because the cids are the glyph ids of Tunga itself -
+ವಿ comes out as U+013B. Those cids are tokens of this font, so ವಿಷಯ comes back
+whole. An extractor that drops such a glyph, e.g. pdftotext, loses them
+before the converter ever sees the text, and there ವಿಷಯ is ಷಯ for good and
+ನಡವಳಿಗಳು is ನಡವ ಗಳು.
+
+
+AN ASCII KANNADA FONT
+
+Nudi is the ascii kannada font family that the Karnataka gazette is published
+in, and an ascii font stores no kannada at all: every glyph of it sits on a
+key of the keyboard, so what comes out of the pdf is the sequence of keys the
+typist pressed, read as latin1. ಸಂಪುಟ comes out as '¸ÀA¥ÀÄl' and ಕರ್ನಾಟಕ as
+'PÀ£ÁðlPÀ'. The glyphs are the pieces a syllable of kannada is drawn out of
+and the keys spell those pieces in the order they are drawn, which is the
+order that kannada writes them in and that Tunga stores them in as well:
+
+    [arkavattu of the syllable before] base [first half of the matra]
+    vattu(s) [length mark] [signs] [arkavattu]
+
+so fonts/kannada/nudi.py reads every syllable as a whole and writes it out
+again the way unicode wants it, the arkavattu in front of the base it sits on
+and the whole matra behind the vattus, exactly as fonts/kannada/tunga.py does.
+
+WHAT THE PIECES OF A NUDI SYLLABLE ARE
+
+A consonant that carries the vowel a is written with the glyph of the letter
+and a mark that draws its head stroke, which is part of the letter in unicode
+and no character of its own, so 'PÀ' is ಕ while 'Pï' - the same letter and the
+virama - is ಕ್. A consonant that the vowel sign i replaces the head stroke of
+is one glyph and not two, ಕಿ being 'Q'. ಫ, ಭ and ಧ are ಪ, ಬ and ದ and a stroke
+on top of them that the font draws as a glyph of its own, so ಫ is '¥s' and ಫಿ
+is '¦ü', the letter under the stroke being a different glyph there. ಮ is the ವ
+glyph and a tail, and ಯ is the anusvara glyph, a stem and that same tail; the
+tail is also the glyph that draws the vowel sign u, so a vowel sign of ಮ or ಯ
+that is drawn in front of the tail sits inside the letter and ಮ is 'ªÀÄ' while
+ಮೆ is 'ªÉÄ'. ವ takes a second glyph for its own vowel sign u so that ವು and ಮ
+stay apart, 'ªÀÅ' against 'ªÀÄ'. Six letters - ಖ ಜ ಟ ಣ ಬ ಲ - take a second
+glyph for the shape they have in front of a matra that changes it, ಖ being 'R'
+at the end of a word and 'S' in ಖೆ.
+
+WHAT AN ASCII FONT SAYS THAT A UNICODE FONT DOES NOT
+
+The text of a Tunga pdf spells a vattu, a dead consonant and the arkavattu the
+same way and fonts/kannada/tunga.py has to guess which of the three was drawn.
+Nudi has a glyph of its own for every vattu, another for the arkavattu and
+another for the virama, and they are different keys, so nothing here has to
+guess: ಕ್ರ, ರ್ಕ and ಕ್ ರ are three different strings and ಆಶ್ರಯ and ತರ್ಕ, which
+Tunga loses, come out whole.
+
+That same split is why a virama of this font sometimes needs a zero width non
+joiner behind it. A virama between two consonants binds them into a conjunct
+in unicode, and in this font it does not - a conjunct is written with the
+vattu glyph of its second consonant, and the virama key is the one that ends a
+word or an abbreviation. So '¦J¸ï¹' is ಪಿಎಸ್‌ಸಿ and not ಪಿಎಸ್ಸಿ and '¥Á¸ï¥ÉÆÃmïð'
+is ಪಾಸ್‌ಪೋರ್ಟ್ and not ಪಾಸ್ಪೋರ್ಟ್, and fonts/kannada/nudi.py puts the joiner in
+to keep the two letters apart. A virama that no consonant follows needs
+nothing, it already ends the word it is written in.
+
+What is lost instead is everything the keyboard never pressed. The pdfs this
+was built from draw 132 of the glyphs of the font and nothing says what the
+rest of them are. The vattus are laid out in the
+order of the alphabet over an unbroken run of keys and the twelve that these
+documents never use are read off that run, and so are the three vowels they
+never use, the thirteen vowels filling thirteen keys in that same order. The
+letters are laid out in no order that holds, so a key that no document here
+presses has a token only where its neighbours leave one reading open, and what
+is left over is reported and dropped: ಝ, ಞ, ಢ, ಱ and ೞ have no token, nor does
+the vowel sign i of ಙ, ಠ and ಢ.
+
+The weights of Nudi differ only in what the digit keys draw. The roman ones
+(Nudi01e, Nudi05e) draw the latin digits and the kannada one (Nudi01k) draws
+the kannada digits, so the 15 on the cover of a gazette is ೧೫ - which is why
+there are two converters, 'nudi' and 'nudi_kannada_digits', for one font.
+
+
+AN 8-BIT KANNADA FONT WHOSE GLYPHS ARE NAMED TWO DIFFERENT WAYS
+
+AkliteKndIpsita is the display font that the masthead of the Karnataka
+gazette - ಕರ್ನಾಟಕ ರಾಜ್ಯಪತ್ರ, drawn as an outlined title across the top of the
+front page - is set in. It is an 8-bit font like Nudi, so the text of such a
+pdf is the keys the typist pressed rather than any kannada, and its glyphs
+are the pieces of a syllable spelled in the order they are drawn,
+
+    base [head stroke] [matra] vattu(s) [arkavattu]
+
+so fonts/kannada/aklite.py reads a syllable as a whole and writes it out the
+way unicode wants it, the arkavattu in front of the base it sits on and the
+matra behind the vattus, exactly as fonts/kannada/nudi.py does. The head
+stroke of a consonant that carries the vowel a is a glyph of its own here
+too - ಕ is the ka glyph and that stroke - while ಟ, which kannada writes no
+head stroke on, is the letter alone.
+
+What is peculiar to this font is that the same glyph comes out of two of
+these pdfs as two different characters. The glyphs of an 8-bit font sit on
+the bytes of a latin table and carry the glyph names of whatever characters
+live there, and those names say nothing about what is drawn; the byte 0xC2
+draws ನ, and one producer names that glyph the macroman way (/logicalnot)
+while the other names it the windows way (/Acircumflex), so an extractor
+reads it back out as '¬' from the one pdf and as 'Â' from the other. Every
+one of the glyphs sits on the same byte in both.
+
+The glyph table of fonts/kannada/aklite.py is therefore keyed by the byte,
+and a lexer is built over each of the two conventions. pick_lexer() chooses
+between them for each run of text, by how many of the run's characters each
+convention has a glyph for - a document is written by one producer and never
+mixes them. U+00C2 is the only character that means anything under both, the
+byte 0xE5 read the macroman way (the vattu of ya) and the byte 0xC2 read the
+windows way (ನ), so a run made of nothing but that character and spaces ties,
+and is read the windows way, where it is a letter that can stand on its own
+rather than a vattu with no consonant in front of it.
+
+WHAT IS NOT KNOWN ABOUT AKLITE
+
+The pdfs this was built from draw thirteen glyphs of the font, the ones the
+masthead is written with, and nothing in them says what the rest of it draws:
+the subsets carry no other glyph, the encoding names no other byte, and the
+ToUnicode map of the one pdf that has a map is the same list of latin glyph
+names again. The thirteen were identified by rendering the outlines the
+subset itself carries, one glyph at a time, and lining them up against an OCR
+of the same region of the page (tesseract -l eng+kan). A byte outside them is
+reported and dropped.
+
+The masthead is drawn twice over in some of these pdfs, once for the outline
+and once for the fill, and a pdf hands the overlapping pieces out as runs of
+their own - so a run can begin in the middle of a syllable. A matra or a
+vattu that starts one is written out where it stands rather than dropped, and
+a character that is no glyph of the font at all heads no syllable, so the
+arkavattu of the piece that follows a newline is not carried back across it.
