@@ -1,28 +1,28 @@
 # PDFs always in the parity corpus, with why. Found in M0/M1 (SPIKES.md).
 # known_bad: R's golden text is known to be wrong here; the note says how.
-- source: /Users/mukund/orgpedia/Try/indic2unicode/202606122029536001.pdf
+- source: ~/orgpedia/Try/indic2unicode/202606122029536001.pdf
   reason: sample PDF of the project; Sakal; signature text pdfium drops
-- source: /Users/mukund/orgpedia/indicGovBench/benchmark3/pdfs/order_en_current_021.pdf
+- source: ~/orgpedia/indicGovBench/benchmark3/pdfs/order_en_current_021.pdf
   reason: Word export, Nirmala UI with ActualText and a sound map (resolve.py sound-map rule)
-- source: /Users/mukund/orgpedia/Try/playa/Hindi-Google.pdf
+- source: ~/orgpedia/Try/playa/Hindi-Google.pdf
   reason: Google Docs Mangal, repaired, with ActualText
   known_bad: "हंिदी for हिंदी: mangal_glyphs reorders ActualText that is already logical (OQ-9)"
-- source: /Users/mukund/orgpedia/Try/playa/Hindi-WordDesktop.pdf
+- source: ~/orgpedia/Try/playa/Hindi-WordDesktop.pdf
   reason: Word desktop export, Nirmala UI
-- source: /Users/mukund/orgpedia/Try/playa/Hindi-Word365Cloud.pdf
+- source: ~/orgpedia/Try/playa/Hindi-Word365Cloud.pdf
   reason: Word 365 cloud export
-- source: /Users/mukund/orgpedia/CID_Glyphs/sample.pdf
+- source: ~/orgpedia/CID_Glyphs/sample.pdf
   reason: cidpdf's sample; Sakal fill+stroke synthetic bold
-- source: /Users/mukund/orgpedia/indicGovBench/benchmark3/pdfs/order_hi_current_039.pdf
+- source: ~/orgpedia/indicGovBench/benchmark3/pdfs/order_hi_current_039.pdf
   reason: Mangal-Regular and Lohit-Devanagari; U+FFFD glyphs in texttrace
   known_bad: "Lohit-Devanagari (PDFium-produced) has no indic2unicode converter: text stays in visual order with control characters (िदनांक, पृ.\x18मांक)"
-- source: /Users/mukund/orgpedia/mahfin2/import/documents/20040812163004001.pdf
+- source: ~/orgpedia/mahfin2/import/documents/20040812163004001.pdf
   reason: legacy DVB-TTYogesh, left out (D-19)
   known_bad: "DVB-TTYogesh text is left out as legacy regions (D-19); R leaves it as 8-bit glyph codes"
-- source: /Users/mukund/orgpedia/mahfin2/import/documents/201809121214439505.pdf
+- source: ~/orgpedia/mahfin2/import/documents/201809121214439505.pdf
   reason: legacy DVB-TTSurekhEN beside Sakal and Mangal (D-19)
   known_bad: "DVB-TTSurekhEN is left out (D-19); it draws only spaces here"
-- source: /Users/mukund/orgpedia/mah2024/mahadmin2024/import/documents/202502101825563407.pdf
+- source: ~/orgpedia/mah2024/mahadmin2024/import/documents/202502101825563407.pdf
   reason: DVOT-SurekhMR; widest ink spill past rawdict boxes (SPIKES §3)
-- source: /Users/mukund/orgpedia/mahfin2/import/documents/202308171510373505.pdf
+- source: ~/orgpedia/mahfin2/import/documents/202308171510373505.pdf
   reason: 'attributes: italic font (Times New Roman,Italic) beside Sakal (UP-VF-7)'

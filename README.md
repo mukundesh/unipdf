@@ -1,19 +1,38 @@
 # unipdf
 
 Hindi and Marathi text from PDFs as correct Unicode, with word boxes and font
-attributes. The text conversion is indic2unicode, absorbed unchanged
-(`src/unipdf/i2u/`). Geometry comes from PyMuPDF glyphs.
+attributes. The text conversion is
+[indic2unicode](https://github.com/mukundesh/indic2unicode), absorbed with
+its imports rewritten only (`src/unipdf/i2u/`). Geometry comes from PyMuPDF
+glyphs.
 
-Status: **v1 (M5)**. Requirements and plan in `specs/`; the JSON is described
-in `specs/JSON_SCHEMA.md`. It replaces `../read_pdf.py` and
-`../read_pdf_cidpdf.py` (kept in `tools/retired/`).
+Status: **v0.2.0** (M5, then D-19..D-21). Requirements and plan in `specs/`;
+the JSON is described in `specs/JSON_SCHEMA.md`.
 
 ## Install
 
 ```sh
+git clone git@github.com:mukundesh/unipdf.git
 cd unipdf
 uv sync
 uv run unipdf --help
+```
+
+As a dependency of another project, pinned to a release tag:
+
+```toml
+dependencies = ["unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.0"]
+```
+
+PyMuPDF is pinned to 1.28.2, the version the glyph join and boxes were
+measured on (`specs/SPIKES.md`); a project that needs another version should
+run the tests against it before moving the pin.
+
+To change the absorbed indic2unicode, clone it beside unipdf, as
+`tools/check_upstream.sh` and `tools/sync_upstream.sh` expect:
+
+```sh
+git clone git@github.com:mukundesh/indic2unicode.git   # next to unipdf/
 ```
 
 Python 3.12+. Dependencies: PyMuPDF, fontTools, ply.

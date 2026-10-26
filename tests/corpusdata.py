@@ -21,7 +21,7 @@ def resolve_pdf(entry: dict) -> Path | None:
         path = CORPUS / entry["file"]
         if path.exists():
             return path
-    src = Path(entry["source"])
+    src = Path(entry["source"]).expanduser()  # sources are written with ~
     if src.exists() and hashlib.sha256(src.read_bytes()).hexdigest() == entry["sha256"]:
         return src
     return None

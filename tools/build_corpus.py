@@ -298,7 +298,8 @@ def cmd_pick(args):
     with open(HERE / "tools" / "corpus_includes.yaml", encoding="utf-8") as f:
         includes = yaml.safe_load(f)
     for inc in includes:
-        rec = next((r for r in recs if r["path"] == inc["source"]), None) or scan_one(inc["source"])
+        src = os.path.expanduser(inc["source"])
+        rec = next((r for r in recs if r["path"] == src), None) or scan_one(src)
         info = confirm(rec)
         if info is None:
             gaps[inc["source"]] = "named include could not be read"
@@ -318,7 +319,8 @@ def cmd_pick(args):
             dst = CORPUS / "pdfs" / f"{e['id']}.pdf"
             shutil.copyfile(e["path"], dst)
             e["file"] = f"pdfs/{e['id']}.pdf"
-        e["source"] = e.pop("path")
+        # written with ~ for the home directory, which corpusdata expands
+        e["source"] = e.pop("path").replace(os.path.expanduser("~") + os.sep, "~/", 1)
     manifest = {
         "about": "UP-VF-3 parity corpus; built by tools/build_corpus.py pick",
         "copied": copy,
