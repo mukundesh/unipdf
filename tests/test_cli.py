@@ -2,6 +2,7 @@ import pytest
 from corpusdata import corpus_pdfs, golden_paths
 
 from unipdf.cli import main, parse_font_map, parse_page_range
+from unipdf.model import SCHEMA_VERSION
 
 
 def test_parse_page_range():
@@ -89,7 +90,7 @@ def test_json_command(tmp_path):
     out = tmp_path / "doc.json"
     assert main(["json", "-p", "1", str(corpus_pdf("c003")), "-o", str(out)]) == 0
     d = json.loads(out.read_text(encoding="utf-8"))
-    assert d["schema_version"] == "0.1" and d["options"]["pages"] == [0]
+    assert d["schema_version"] == SCHEMA_VERSION and d["options"]["pages"] == [0]
 
 
 def test_cell_escapes():

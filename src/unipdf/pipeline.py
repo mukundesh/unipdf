@@ -36,6 +36,17 @@ class PasswordRequired(Exception):
     """the PDF is encrypted and does not open without a password (UP-IN-1)"""
 
 
+def open_pdf(data: bytes) -> pymupdf.Document:
+    """the PDF in `data`; pymupdf.FileDataError if it is not one. pymupdf
+    opens what it cannot read as a PDF as some other kind of document - a
+    text file, an image - whatever the file type it is told"""
+    doc = pymupdf.open(stream=data, filetype="pdf")
+    if not doc.is_pdf:
+        doc.close()
+        raise pymupdf.FileDataError("not a PDF")
+    return doc
+
+
 def read_document(
     source: str | os.PathLike | bytes,
     pages: list[int] | None = None,
@@ -49,22 +60,44 @@ def read_document(
     row_tolerance: float = ROW_TOLERANCE,
     legacy: str = SKIP,
 ) -> Document:
-    """Read a PDF. `pages` are 0-based; pages past the end are ignored, as in R.
-    Only the selected pages are converted, in page order, so a stateful
-    converter starts on the first selected page in its initial state.
-    `legacy="skip"` leaves words in legacy 8-bit fonts out of the text
-    (D-19); `"keep"` passes them through or converts them as R does."""
+    """Read a PDF into a Document: pages, lines, words with boxes, fonts and
+    issues (docs/USAGE.md; the JSON form is specs/JSON_SCHEMA.md).
+
+    source         a path, or the PDF's bytes
+    pages          0-based page numbers to read, None for all; numbers past
+                   the end are ignored. Pages are converted in order, so a
+                   converter that keeps state starts afresh on the first one
+    repair         repair broken font maps first (default True)
+    force          a converter name to use for every font
+    font_map       {font name: converter name} for named fonts, matched with
+                   or without the subset prefix and style suffix
+    join           join words PyMuPDF split before a vowel sign (default True)
+    rawdict_lines  one output line per PyMuPDF line instead of visual rows
+    j2             also join across a made-up space narrower than j2 x font
+                   size (off by default; 0.15 is a reasonable value)
+    actual_text    "bypass" (default): use a PDF's ActualText as the text,
+                   unless it is known to be wrong; "convert": run converters
+                   over it, as the old read_pdf.py did
+    row_tolerance  how far apart, in font sizes, two baselines can be and
+                   still be one visual row (default 0.2)
+    legacy         "skip" (default): leave words in legacy 8-bit fonts out of
+                   the text, as legacy regions; "keep": pass them through as
+                   the old read_pdf.py did
+
+    Raises FileNotFoundError, pymupdf.FileDataError (not a PDF),
+    PasswordRequired (encrypted), ValueError (an unknown converter or
+    option value)."""
     if actual_text not in (BYPASS, CONVERT):
         raise ValueError(f"actual_text must be {BYPASS!r} or {CONVERT!r}")
     if isinstance(source, bytes | bytearray):
         data = bytes(source)
-        doc = pymupdf.open(stream=data, filetype="pdf")
+        doc = open_pdf(data)
         info = {"filename": None}
     else:
         path = os.fspath(source)
         with open(path, "rb") as f:
             data = f.read()
-        doc = pymupdf.open(path)
+        doc = open_pdf(data)
         info = {"filename": path}
     info.update(sha256=hashlib.sha256(data).hexdigest(), size=len(data))
 
@@ -84,6 +117,7 @@ def read_document(
             return "\ufffd" in text or convs.resolve(font).rule == RULE_REPAIRED
 
         out_pages = []
+        rotated: dict[int, pymupdf.Matrix] = {}  # page -> unrotated to displayed
         for pno in selected:
             pdf_page = doc[pno]
             pg = extract_page(pdf_page, issues,
@@ -107,8 +141,14 @@ def read_document(
                 page.blocks = list(pg.blocks)
             else:
                 page.blocks = list(dict.fromkeys(line.block for line in page.lines))
+            if pdf_page.rotation:
+                rotated[pno] = pdf_page.rotation_matrix
+                to_displayed(page, rotated[pno])
             out_pages.append(page)
         report_no_converter(convs, [(p.index, r) for p in out_pages for r in p.runs], issues)
+        for issue in issues.all():
+            if issue.page in rotated and issue.bbox is not None:
+                issue.bbox = _box(issue.bbox, rotated[issue.page])
         report_legacy(convs, out_pages, issues)
 
         options = {
@@ -156,3 +196,26 @@ def _count(n: int, noun: str) -> str:
 
 def _base(font: str) -> str:
     return re.sub(r"\+\d+$", "", font)
+
+
+def _box(b, m: pymupdf.Matrix):
+    return None if b is None else tuple(pymupdf.Rect(b) * m)
+
+
+def to_displayed(page: Page, m: pymupdf.Matrix) -> None:
+    """the boxes and points of a rotated page, made in the unrotated page
+    where its text runs left to right, put where the page is displayed: the
+    space of `page.width` x `page.height` and of the page's image"""
+    for g in page.glyphs:
+        g.bbox = _box(g.bbox, m)
+        g.origin = tuple(pymupdf.Point(g.origin) * m)
+    for line in page.lines:
+        line.bbox = _box(line.bbox, m)
+    for w in page.words:
+        w.bbox = _box(w.bbox, m)
+        for c in w.clusters or []:
+            c.bbox = _box(c.bbox, m)
+        for fr in w.font_runs:
+            fr.bbox = _box(fr.bbox, m)
+    for r in page.legacy_regions:
+        r.bbox = _box(r.bbox, m)

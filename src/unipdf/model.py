@@ -15,7 +15,7 @@ from typing import Any
 from unipdf.issues import Issue
 from unipdf.pdf.fonts import FontProgram
 
-SCHEMA_VERSION = "0.1"
+SCHEMA_VERSION = "0.2"
 PAGE_BREAK = "\n\n--- Page Break ---\n\n"
 
 Box = tuple[float, float, float, float]
@@ -214,6 +214,10 @@ class Font:
 
 @dataclass
 class Document:
+    """What unipdf.open() returns. Its fields are the JSON's
+    (specs/JSON_SCHEMA.md); text() joins the pages with PAGE_BREAK,
+    iter_words() walks every page's words"""
+
     source: dict[str, Any]
     options: dict[str, Any]
     pages: list[Page]
@@ -228,11 +232,18 @@ class Document:
         for page in self.pages:
             yield from page.words
 
-    def to_dict(self) -> dict[str, Any]:
-        return {"schema_version": SCHEMA_VERSION, **_rounded(asdict(self))}
+    def to_dict(self, glyphs: bool = True) -> dict[str, Any]:
+        """the model as specs/JSON_SCHEMA.md describes it. glyphs=False
+        leaves out every page's `glyphs` and `runs`, most of its size; the
+        glyph numbers in words, lines and regions still refer to them"""
+        out = {"schema_version": SCHEMA_VERSION, **_rounded(asdict(self))}
+        if not glyphs:
+            for page in out["pages"]:
+                del page["glyphs"], page["runs"]
+        return out
 
-    def to_json(self, indent: int | None = None) -> str:
-        return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
+    def to_json(self, indent: int | None = None, glyphs: bool = True) -> str:
+        return json.dumps(self.to_dict(glyphs=glyphs), ensure_ascii=False, indent=indent)
 
 
 def _rounded(obj):

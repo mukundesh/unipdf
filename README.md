@@ -6,8 +6,10 @@ attributes. The text conversion is
 its imports rewritten only (`src/unipdf/i2u/`). Geometry comes from PyMuPDF
 glyphs.
 
-Status: **v0.2.0** (M5, then D-19..D-21). Requirements and plan in `specs/`;
-the JSON is described in `specs/JSON_SCHEMA.md`.
+Status: **v0.2.1**. **Using it from code: [`docs/USAGE.md`](docs/USAGE.md)** -
+the API, the output, coordinates, recipes, errors, logging, a full JSON
+example. Every JSON field: [`specs/JSON_SCHEMA.md`](specs/JSON_SCHEMA.md).
+Requirements and plan in `specs/`.
 
 ## Install
 
@@ -21,7 +23,7 @@ uv run unipdf --help
 As a dependency of another project, pinned to a release tag:
 
 ```toml
-dependencies = ["unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.0"]
+dependencies = ["unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.1"]
 ```
 
 PyMuPDF is pinned to 1.28.2, the version the glyph join and boxes were
@@ -47,6 +49,7 @@ uv run unipdf words --format json input.pdf       # the same, plus glyph numbers
 uv run unipdf regions input.pdf                   # TSV: words in legacy 8-bit fonts, left out of the text
 uv run unipdf glyphs input.pdf                    # TSV: one row per glyph, its box, origin, glyph id, raw text
 uv run unipdf json --indent 1 input.pdf           # the whole model (specs/JSON_SCHEMA.md)
+uv run unipdf json --no-glyphs input.pdf          # the same without per-glyph records, a quarter the size
 uv run unipdf fonts input.pdf                     # converter, resolution rule, PDF font objects, bold/italic evidence
 uv run unipdf show -p 1 input.pdf -o page.html    # page image with word and akshara boxes (or page.png)
 ```
@@ -72,7 +75,7 @@ of the old `read_pdf.py` (with its two converter-resolution bugs fixed) byte for
 
 The `words` and `glyphs` tables number pages, lines, words and glyphs from 1.
 A word's `glyphs` (JSON) are numbers in the `glyphs` table of the same page.
-Boxes are PDF points, top-left origin. In TSV, tab, newline, backslash and
+Boxes are PDF points, top-left origin of the page as displayed. In TSV, tab, newline, backslash and
 control characters in text are escaped (`\t`, `\n`, `\\`, `\x01`).
 
 Text that is missing or left unconverted is summarised on stderr, e.g.
@@ -120,6 +123,8 @@ errors.
 
 ## Python
 
+The short version; [`docs/USAGE.md`](docs/USAGE.md) has the rest.
+
 ```python
 import unipdf
 
@@ -140,8 +145,9 @@ unipdf.convert("chanakya", "fdlku")                  # indic2unicode's string AP
 unipdf.convert_with_provenance("chanakya", "fdlku")  # [("क", [1]), ("ि", [0]), ...]
 ```
 
-`unipdf.open` also takes the PDF as `bytes`, and raises
-`unipdf.PasswordRequired` for an encrypted PDF.
+`unipdf.open` also takes the PDF as `bytes`. It raises
+`unipdf.PasswordRequired` for an encrypted PDF and `pymupdf.FileDataError`
+for a file that is not a PDF.
 
 ## How conversion and geometry fit together
 
@@ -211,6 +217,7 @@ hand-labelled words in `tests/hand/`.
 
 | Path | What |
 |---|---|
+| `docs/` | `USAGE.md`, the guide for code that calls unipdf |
 | `specs/` | REQUIREMENTS, IMPLEMENTATION_PLAN, SPIKES, JSON_SCHEMA |
 | `src/unipdf/i2u/` | indic2unicode at `da8994c` (D-21), imports rewritten only (see `UPSTREAM`) |
 | `src/unipdf/pipeline.py` | `unipdf.open()`: repair → glyphs → runs → rows → words |

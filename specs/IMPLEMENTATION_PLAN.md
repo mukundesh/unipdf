@@ -281,6 +281,15 @@ changed upstream (D-21). Words where only unipdf's spelling is impossible
 went from 2,141 to 141, U+FFFD from 608 to 0; the golden text was rebuilt
 (`tools/make_golden.py`) and changed only where it was wrong.
 
+**v0.2.1 — for pipelines (2026-10-27).** `docs/USAGE.md` (API, output,
+coordinates, recipes, errors, logging, a real JSON example, every code
+block run against the corpus); JSON_SCHEMA in plain words with a changelog,
+schema 0.2; `to_dict(glyphs=False)` / `unipdf json --no-glyphs`. Two bugs
+found while writing it: a non-PDF opened as a text document (pymupdf goes
+by the extension), now `pymupdf.FileDataError`; on a rotated page boxes
+were in the unrotated page while `width`/`height` were the rotated ones,
+now all in the displayed page.
+
 
 1. `unipdf words` (TSV/JSON), `glyphs`, `json`, `fonts` (UP-CLI-1);
    stderr summary of missing conversions (UP-CLI-2); exit codes.
@@ -343,6 +352,7 @@ it.
 | `test_strings.py` | UP-API-2 | M5 |
 | `test_legacy.py` | D-19 | after M5 |
 | `test_actual_text.py` | D-20 | after M5 |
+| `test_api.py` | non-PDF input, rotated pages, `--no-glyphs` | v0.2.1 |
 
 ## 5. Order and parallelism
 

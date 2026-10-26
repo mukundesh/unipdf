@@ -1,63 +1,94 @@
-# unipdf JSON, schema 0.1
+# unipdf JSON, schema 0.2
 
-What `unipdf json` and `Document.to_json()` give (UP-MD-1, UP-MD-2). The
-field tables below are checked against the output by `tests/test_json.py`:
-every field listed is emitted and every field emitted is listed.
+What `unipdf json` and `Document.to_json()` / `to_dict()` give. For how to
+use it - which fields a pipeline needs, recipes, a full example - see
+[`docs/USAGE.md`](../docs/USAGE.md). The field tables below are checked
+against the output by `tests/test_json.py`: every field listed is emitted and
+every field emitted is listed.
 
-Conventions:
+## Conventions
 
-- Coordinates are PDF points, **top-left origin** (PyMuPDF's); boxes are
-  `[x0, y0, x1, y1]`, points `[x, y]`. Numbers are rounded to 3 decimals.
-- Indices are **0-based** and **per page**: a word's `glyphs` index
-  `page.glyphs`, a line's `words` index `page.words`. (The `words` and
-  `glyphs` commands' tables number from 1.)
-- Fonts are named by the name PyMuPDF spans report (BaseFont without the
-  subset prefix); `fonts[].name` is the key.
-- Output is deterministic: no timestamps, stable order. `source.filename` is
-  the path as given.
-- Text: `text` is Unicode in logical order where a converter made it or the
-  repair vouched for the map; `raw_text`/`raw` is what the PDF gives after
-  ToUnicode repair, before conversion (D-13).
-- Legacy 8-bit fonts (D-19) are not read. Their words have `text` `""` and
-  a `region`; a line's `text` holds `⟦8bit:N⟧` in place of the region, N
-  being its `index` + 1 (the number `unipdf regions` gives it).
+- **Coordinates** are PDF points (1/72 inch) with the origin at the **top
+  left** of the page **as it is displayed**, y growing downwards: the space
+  of `width` × `height` and of the page's rendered image, rotated pages
+  included. A box is `[x0, y0, x1, y1]`, a point `[x, y]`. Numbers are
+  rounded to 3 decimals.
+- **Indices** are **0-based** and **per page**: a word's `glyphs` are
+  positions in its page's `glyphs`, a line's `words` positions in its page's
+  `words`. (The tables of the `words`, `glyphs` and `regions` commands
+  number from 1.)
+- **Fonts** are named as PyMuPDF names them: the PDF's font name without the
+  six-letter subset prefix (`ABCDEE+Mangal` → `Mangal`). `fonts[].name` is
+  the key the other objects use.
+- **Output is deterministic**: no timestamps, stable order. `source.filename`
+  is the path as given.
+- **Text**: `text` is Unicode in logical order. `raw_text` (`raw` in runs) is
+  what the PDF itself gives for the glyphs, after unipdf has repaired broken
+  font maps but before a converter has put the text in order - kept so that
+  a wrong conversion can be checked against what was on the page.
+- **Legacy 8-bit fonts** (DVB-TTSurekh, Kruti Dev, …) are not read. Their
+  words have `text` `""` and a `region`; a line's `text` holds `⟦8bit:N⟧` in
+  place of the region, N being the region's `index` + 1 (the number
+  `unipdf regions` gives it).
+- **`--no-glyphs`** (`to_dict(glyphs=False)`) leaves out every page's
+  `glyphs` and `runs`, most of the size. The glyph numbers in words, lines
+  and regions are still given and still refer to the full model.
+
+## Terms
+
+- **Glyph**: one shape drawn on the page. A conjunct like क्ष can be one
+  glyph; ि is drawn before its consonant, so glyph order is not text order.
+- **Block, PyMuPDF line**: PyMuPDF's own grouping of the text it extracts
+  (its `rawdict` output). unipdf converts text one PyMuPDF line at a time
+  and merges PyMuPDF lines on the same baseline into its output lines.
+- **Run**: consecutive glyphs of one font on one PyMuPDF line - the unit a
+  converter turns into Unicode.
+- **Converter**: an indic2unicode module that turns a font's text into
+  Unicode in logical order (`sakal`, `mangal_glyphs`, …).
+- **Repair**: before extraction, unipdf rewrites the ToUnicode map (the
+  PDF's table from glyph to character) of fonts known to carry a broken one.
+- **ActualText**: replacement text a PDF can put over glyphs. unipdf uses it
+  unless it is known to be wrong (it holds U+FFFD, or its font was
+  repaired); then the glyphs are read instead.
+- **Akshara / cluster**: a consonant with its conjoined consonants and signs
+  (हिं, क्ष्म), the unit a word's `clusters` give boxes for.
 
 ## Document
 
 | field | type | meaning |
 |---|---|---|
-| `schema_version` | string | `"0.1"` |
+| `schema_version` | string | `"0.2"` |
 | `source` | object | `filename` (null when read from bytes), `sha256`, `size` (bytes) |
 | `options` | object | the `unipdf.open()` arguments in effect: `pages` (null = all), `repair`, `force`, `font_map`, `join`, `rawdict_lines`, `j2`, `actual_text` (`"bypass"`/`"convert"`), `row_tolerance`, `legacy` (`"skip"`/`"keep"`) |
 | `pages` | [Page] | the pages read, in order |
 | `fonts` | [Font] | one per font name met on those pages |
 | `issues` | [Issue] | what could not be done, in the order met |
-| `repaired` | object or null | font name → name the ToUnicode repair treated it as; null when repair did not run or failed |
+| `repaired` | object or null | font name → the name the repair treated it as; null when repair did not run or failed |
 
 ## Page
 
 | field | type | meaning |
 |---|---|---|
 | `index` | int | 0-based page number in the PDF |
-| `width`, `height` | number | page size in points (after rotation, as PyMuPDF's `page.rect`) |
-| `rotation` | int | `/Rotate` |
-| `blocks` | [int] | `rawdict` block numbers holding text, in output order |
-| `lines` | [Line] | output lines: visual rows (default) or `rawdict` lines (`rawdict_lines`) |
+| `width`, `height` | number | page size in points, after rotation (what coordinates are relative to) |
+| `rotation` | int | the page's `/Rotate` |
+| `blocks` | [int] | PyMuPDF block numbers that hold text, in output order |
+| `lines` | [Line] | output lines: one per visual row (default), or one per PyMuPDF line with `rawdict_lines` |
 | `words` | [Word] | in reading order |
-| `runs` | [Run] | conversion units |
-| `glyphs` | [Glyph] | every glyph record of the page, in `rawdict` order |
-| `legacy_regions` | [LegacyRegion] | words in legacy 8-bit fonts, left out of the text (D-19) |
+| `runs` | [Run] | conversion units (left out with `--no-glyphs`) |
+| `glyphs` | [Glyph] | every glyph of the page, in PyMuPDF's order (left out with `--no-glyphs`) |
+| `legacy_regions` | [LegacyRegion] | words in legacy 8-bit fonts, left out of the text |
 
 ## Line
 
 | field | type | meaning |
 |---|---|---|
 | `index` | int | |
-| `block` | int | the `rawdict` block it belongs to |
-| `bbox` | box or null | union of its glyphs |
+| `block` | int | the PyMuPDF block it belongs to |
+| `bbox` | box or null | union of its words' boxes |
 | `text` | string | as `unipdf text` prints it, with a placeholder for each legacy region |
 | `words` | [int] | its words |
-| `sources` | [[int, int]] | `(block, line)` of the `rawdict` lines merged into it |
+| `sources` | [[int, int]] | `(block, line)` of the PyMuPDF lines merged into it |
 
 ## Word
 
@@ -65,27 +96,27 @@ Conventions:
 |---|---|---|
 | `index` | int | |
 | `line` | int | its line |
-| `text` | string | converted text; `""` in a legacy region |
-| `raw_text` | string | text of its glyphs before conversion (D-13) |
+| `text` | string | Unicode text; `""` in a legacy region |
+| `raw_text` | string | the PDF's text for its glyphs, before conversion |
 | `bbox` | box or null | union of the boxes of its glyphs, spaces left out |
-| `glyphs` | [int] | the glyphs its text came from, and its `unattributed` glyphs, in `rawdict` order |
-| `glyph_ids` | [int] | font glyph ids of those glyphs (D-13); an ActualText group gives the ids of the glyphs it replaces, so the list can be longer than `glyphs` |
+| `glyphs` | [int] | the glyphs its text came from, and its `unattributed` glyphs, in PyMuPDF's order |
+| `glyph_ids` | [int] | the font's glyph ids for those glyphs; an ActualText group gives the ids of the glyphs it stands for, so the list can be longer than `glyphs` |
 | `fonts` | [string] | fonts of its glyphs, in order of first use |
-| `size` | number or null | most common glyph size |
-| `sizes` | [number] | all glyph sizes, ascending |
+| `size` | number or null | most common font size of its glyphs |
+| `sizes` | [number] | all its font sizes, ascending |
 | `bbox_level` | string | `"word"` |
-| `joined_from` | [string] or null | the parts the extraction split it into, when unipdf joined them (UP-LY-5) |
-| `join_rules` | [string] or null | rule of each removed space: `"J1"` (mark starts the next part), `"J2"` (narrow generated space) |
-| `unattributed` | [int] | glyphs the converter dropped, given to the nearest word (UP-AL-7): in `glyphs`, `raw_text` and `bbox`, not in `text` |
-| `clusters` | [Cluster] or null | aksharas with boxes; null when a run of it has only run-level provenance, or in a legacy region |
-| `font_runs` | [FontRun] | the parts of the word in one font (UP-AT-4) |
+| `joined_from` | [string] or null | the parts PyMuPDF split it into, when unipdf joined them |
+| `join_rules` | [string] or null | why each space was removed: `"J1"` (the next part starts with a vowel sign or other mark no word starts with), `"J2"` (a narrow space PyMuPDF made up; off by default) |
+| `unattributed` | [int] | glyphs the converter dropped, given to the nearest word: in `glyphs`, `raw_text` and `bbox`, not in `text` |
+| `clusters` | [Cluster] or null | aksharas with boxes; null when its converter gives no per-glyph mapping, or in a legacy region |
+| `font_runs` | [FontRun] | the parts of the word in one font |
 | `bold`, `italic` | bool | bold if any font run is; italic likewise |
 | `bold_evidence`, `italic_evidence` | [string] | the evidence of the runs that decided (see Evidence) |
-| `region` | int or null | the legacy region it is in: a glyph of it, not a space, is in a legacy 8-bit font |
+| `region` | int or null | the legacy region it is in: one of its glyphs, not a space, is in a legacy 8-bit font |
 
 ## LegacyRegion
 
-Consecutive words of a line in legacy 8-bit fonts (D-19), for another tool to
+Consecutive words of a line in legacy 8-bit fonts, for another tool (OCR) to
 read from the page image.
 
 | field | type | meaning |
@@ -102,7 +133,7 @@ read from the page image.
 | field | type | meaning |
 |---|---|---|
 | `text` | string | one akshara |
-| `bbox` | box or null | union of its glyphs |
+| `bbox` | box or null | union of its glyphs' boxes |
 | `glyphs` | [int] | the glyphs it came from |
 
 ## FontRun
@@ -113,7 +144,7 @@ read from the page image.
 | `text`, `raw_text` | string | |
 | `bbox` | box or null | |
 | `glyphs` | [int] | |
-| `size` | number or null | most common glyph size |
+| `size` | number or null | most common font size |
 | `bold`, `italic` | bool | |
 | `bold_evidence`, `italic_evidence` | [string] | |
 
@@ -122,51 +153,51 @@ read from the page image.
 | field | type | meaning |
 |---|---|---|
 | `index` | int | |
-| `block`, `line` | int | its `rawdict` line |
+| `block`, `line` | int | its PyMuPDF line |
 | `font` | string | |
-| `converter` | string or null | indic2unicode converter used; null = text passed through |
-| `rule` | int or string | resolution rule (UP-FN-2): 1 repaired, 2 reads unrepaired, 3 by name, 4 none, `"forced"`, `"legacy"` (a legacy 8-bit font, left out: D-19) |
+| `converter` | string or null | indic2unicode converter used; null = text passed through as the PDF gives it |
+| `rule` | int or string | why that converter: 1 the font was repaired, 2 a converter that reads the font repaired or not, 3 by font name, 4 none, `"forced"` (`--font` / `--font-map`), `"legacy"` (a legacy 8-bit font, left out) |
 | `raw` | string | the glyphs' text before conversion |
 | `text` | string | converted text |
 | `glyphs` | [int] | |
-| `pieces` | [[string, [int]]] | provenance: each piece of `text` with the glyphs it came from |
-| `actual_text` | bool | holds ActualText glyphs (D-18) |
+| `pieces` | [[string, [int]]] | each piece of `text` with the glyphs it came from |
+| `actual_text` | bool | holds ActualText glyphs, which bypass the converter |
 | `provenance` | string | `"piece"`, or `"run"` when every piece comes from the whole run |
 | `logical` | bool | `text` is known to be in logical order |
-| `error` | string or null | the converter's exception; `text` is then `raw` (UP-CV-5) |
+| `error` | string or null | the converter's exception; `text` is then `raw` |
 
 ## Glyph
 
 | field | type | meaning |
 |---|---|---|
 | `index` | int | |
-| `text` | string | what `rawdict` gives for it after repair (may be several code points) |
-| `glyph_id` | int or null | font glyph id from `texttrace`; null for ActualText groups and unjoined glyphs |
-| `origin` | point | pen position |
-| `bbox` | box | `rawdict`'s box (D-14) |
+| `text` | string | the PDF's text for it, after repair (may be several code points) |
+| `glyph_id` | int or null | the font's glyph id; null for ActualText groups and glyphs PyMuPDF gave no id for |
+| `origin` | point | pen position (on the baseline) |
+| `bbox` | box | from the font's ascender to its descender, not the ink |
 | `font` | string | |
 | `size` | number | |
-| `block`, `line` | int | its `rawdict` line |
+| `block`, `line` | int | its PyMuPDF line |
 | `render_mode` | int or null | 0 fill, 1 stroke, 2 fill+stroke, 3 invisible (OCR layers) |
 | `repeats` | [int] | render modes of later passes that drew it again (Word's fake bold: `[1]`) |
 | `line_width` | number or null | of the stroking pass, if any |
 | `color` | int or null | sRGB as `0xRRGGBB` |
 | `opacity` | number or null | 0–1 |
 | `seqno` | int or null | drawing order on the page |
-| `synthetic` | bool | a space MuPDF generated (UP-EX-5) |
-| `actual_text` | bool | `/ActualText` replacement text standing for several glyphs (UP-EX-7) |
-| `actual_text_glyph_ids` | [int] or null | the glyph ids that text replaces |
+| `synthetic` | bool | a space PyMuPDF made up between glyphs, not drawn by the PDF |
+| `actual_text` | bool | ActualText standing for several glyphs |
+| `actual_text_glyph_ids` | [int] or null | the glyph ids that text stands for |
 | `unattributed` | bool | the converter dropped it |
-| `actual_text_ignored` | bool | drawn under an `/ActualText` that was not used (D-20): its text is the glyph's own |
+| `actual_text_ignored` | bool | drawn under an ActualText that was not used: its text is the glyph's own |
 
 ## Font
 
 | field | type | meaning |
 |---|---|---|
-| `name` | string | as spans report it |
+| `name` | string | as PyMuPDF names it |
 | `converter` | string or null | |
 | `rule` | int or string | as in Run |
-| `matched` | string or null | what the rule matched: repaired-as name, converter name, `"sound map"`, legacy family (`dv-tt`, `shree-lipi`, `akruti`, `krutidev`, `aps`, `chanakya`, `other`) |
+| `matched` | string or null | what the rule matched: the repaired-as name, the converter name, `"sound map"` (repair checked the map and found it right), or the legacy family (`dv-tt`, `shree-lipi`, `akruti`, `krutidev`, `aps`, `chanakya`, `other`) |
 | `repaired` | bool | its ToUnicode map was repaired in this document |
 | `repaired_as` | string or null | |
 | `programs` | [FontProgram] | the PDF font objects of this name |
@@ -177,8 +208,8 @@ read from the page image.
 
 | field | type | meaning |
 |---|---|---|
-| `xref` | int | |
-| `pdf_name` | string | BaseFont, with subset prefix |
+| `xref` | int | the PDF object number |
+| `pdf_name` | string | the PDF's font name, with subset prefix |
 | `type` | string | `Type0`, `TrueType`, `Type1`, `Type3`, … |
 | `encoding` | string | |
 | `embedded` | bool | |
@@ -220,12 +251,22 @@ Italic: `font_name_italic_keyword`, `pdf_descriptor_italic_angle_A`,
 
 | code | severity | when | context |
 |---|---|---|---|
-| `repair_failed` | warning | ToUnicode repair raised; the document is read unrepaired | |
-| `no_text_layer` | info | a page has no text | |
-| `legacy_font` | warning | words in a legacy 8-bit font were left out (D-19); Word's `+1` font object counts with its font | `family`, `words`, `regions`, `pages` |
+| `repair_failed` | warning | the repair raised; the document is read unrepaired | |
+| `no_text_layer` | info | a page has no text (a scan) | |
+| `legacy_font` | warning | words in a legacy 8-bit font were left out; Word's second font object (`…+1`) counts with its font | `family`, `words`, `regions`, `pages` |
 | `no_converter` | warning | a font with no converter, and a name no legacy family knows, whose text looks like a legacy 8-bit encoding: its text is passed through | `characters`, `legacy`, `pages` |
-| `unconverted_char` | warning | a converter had no token for a character; it is missing from `text` | `glyph`, `char` |
+| `unconverted_char` | warning | a converter had no rule for a character; it is missing from `text` | `glyph`, `char` |
 | `converter_error` | warning | a converter raised on a run; the run's raw text stands | |
-| `provenance_unavailable` | info | a converter with no index map: boxes are per run | |
-| `unjoined_glyph` | info | a glyph could not be joined to `texttrace` (no glyph id) | `glyph` |
-| `joined_words` | info | the extraction split a word and unipdf joined it | `line`, `rule` |
+| `provenance_unavailable` | info | a converter with no per-glyph mapping: boxes are per run | |
+| `unjoined_glyph` | info | PyMuPDF gave no glyph id for a glyph | `glyph` |
+| `joined_words` | info | PyMuPDF split a word and unipdf joined it | `line`, `rule` |
+
+## Changes
+
+- **0.2** (unipdf 0.2.0): `Page.legacy_regions`, `Word.region`, rule and
+  family `"legacy"`, issue `legacy_font`; `Glyph.actual_text_ignored`;
+  `options.legacy`; issue `extraction_mismatch` is no longer raised;
+  `--no-glyphs` output (unipdf 0.2.1); on a rotated page boxes and points
+  are where the page is displayed (unipdf 0.2.1; 0.2.0 gave them in the
+  unrotated page while `width` and `height` were the rotated ones).
+- **0.1** (unipdf 0.1.0): first version.

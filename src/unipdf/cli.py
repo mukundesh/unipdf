@@ -77,13 +77,11 @@ def write_output(text: str, path: str | None) -> None:
 
 
 def read(args):
-    import pymupdf
-
-    from unipdf.pipeline import read_document
+    from unipdf.pipeline import open_pdf, read_document
 
     pages = None
     if args.pages:
-        with pymupdf.open(args.pdf) as doc:
+        with open(args.pdf, "rb") as f, open_pdf(f.read()) as doc:
             pages = parse_page_range(args.pages, doc.page_count)
     return read_document(
         args.pdf,
@@ -291,7 +289,7 @@ def cmd_glyphs(args) -> int:
 def cmd_json(args) -> int:
     doc = read(args)
     report(doc)
-    write_output(doc.to_json(indent=args.indent), args.output)
+    write_output(doc.to_json(indent=args.indent, glyphs=not args.no_glyphs), args.output)
     return 0
 
 
@@ -378,6 +376,8 @@ def build_parser() -> argparse.ArgumentParser:
     j = sub.add_parser("json", help="the whole document model as JSON (specs/JSON_SCHEMA.md)")
     add_common(j)
     j.add_argument("--indent", type=int, help="indent the JSON by this many spaces")
+    j.add_argument("--no-glyphs", action="store_true",
+                   help="leave out the pages' glyphs and runs (most of the size)")
     j.set_defaults(fn=cmd_json)
 
     f = sub.add_parser("fonts", help="font table: converter, resolution rule, bold, italic")
