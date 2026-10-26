@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Mapping
 
+from unipdf.convert.legacy import SKIP
 from unipdf.convert.provenance import provenance_level, tracked_to_unicode
 from unipdf.convert.resolve import (
     RULE_NONE,
@@ -24,10 +25,8 @@ from unipdf.convert.resolve import (
     SOUND_MAP,
     ConverterResolver,
     Resolution,
-    is_glyphs_converter,
     strip_subset,
 )
-from unipdf.i2u.fix_tounicode import font_lookup_key
 from unipdf.i2u.fontconv import FontConv
 from unipdf.issues import (
     CONVERTER_ERROR,
@@ -43,7 +42,7 @@ from unipdf.pdf.glyphs import RawLine
 BYPASS, CONVERT = "bypass", "convert"
 
 # share of a font's characters in legacy ranges above which a font with no
-# converter is reported (UP-CLI-2)
+# converter, and a name no legacy family knows, is reported (UP-CLI-2)
 LEGACY_SHARE = 0.2
 
 
@@ -57,10 +56,11 @@ class Converters:
         force: str | None = None,
         font_map: Mapping[str, str] | None = None,
         programs: Mapping[str, list[FontProgram]] | None = None,
+        legacy: str = SKIP,
     ):
         self.fontconv = FontConv()
         self.resolver = ConverterResolver(self.fontconv.converters, force=force,
-                                          font_map=font_map)
+                                          font_map=font_map, legacy=legacy)
         self.repaired = repaired
         self.programs = programs or {}
         self.resolutions: dict[str, Resolution] = {}
@@ -218,19 +218,12 @@ def _legacy_char(c: str) -> bool:
     return 0x80 <= o <= 0xFF or 0xE000 <= o <= 0xF8FF or (o < 0x20 and c not in "\t\n\r")
 
 
-def _suggest(convs: Converters, font: str) -> str | None:
-    """the longest converter name inside the font's name (DVB-TTYogesh -> yogesh)"""
-    key = font_lookup_key(strip_subset(font))
-    found = [n for n in convs.fontconv.converters
-             if not is_glyphs_converter(n) and len(n) >= 4 and font_lookup_key(n) in key]
-    return max(found, key=lambda n: (len(n), n), default=None)
-
-
 def report_no_converter(convs: Converters, runs: list[tuple[int, Run]], issues: IssueBag) -> None:
     """(page, run) pairs -> a font with no converter whose text looks like a
-    legacy 8-bit encoding
-    (UP-CLI-2). Fonts with plain ASCII text (English, or a legacy font that
-    uses only ASCII codes) cannot be told apart and are not reported."""
+    legacy 8-bit encoding but whose name no legacy family knows (a font Word
+    renamed, MSTT31…), so its text is passed through (UP-CLI-2). Fonts with
+    plain ASCII text (English, or a legacy font that uses only ASCII codes)
+    cannot be told apart and are not reported."""
     counts: dict[str, list[int]] = {}
     pages: dict[str, set[int]] = {}
     for page, run in runs:
@@ -244,11 +237,9 @@ def report_no_converter(convs: Converters, runs: list[tuple[int, Run]], issues: 
         pages.setdefault(run.font, set()).add(page)
     for font, (total, legacy) in counts.items():
         if total and legacy / total >= LEGACY_SHARE:
-            suggest = _suggest(convs, font)
-            hint = f" ({suggest} may read it: --font-map '{strip_subset(font)}={suggest}')" \
-                if suggest else ""
             issues.add(severity="warning", code=NO_CONVERTER, font=font,
                        message=f"{font} has no converter and {legacy} of its {total} "
-                               f"characters look like a legacy encoding{hint}",
-                       context={"characters": total, "legacy": legacy, "suggest": suggest,
+                               f"characters look like a legacy encoding; its text is "
+                               f"passed through",
+                       context={"characters": total, "legacy": legacy,
                                 "pages": sorted(pages[font])})

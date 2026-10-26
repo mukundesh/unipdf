@@ -156,6 +156,18 @@ class DVOTSurekh(BaseLang):
             # प्र, ब्र and श्र, and all of those the table already has
             'TTARA'     : uMap['TTA'] + halant + uMap['RA'], \
 
+            # and the ones SakalMarathi draws as one letter beside those -
+            # फ्र, ड्र, श्ल, ल्ल, ठ्य, स्र and स्त्र, see fonts/marathi/sakal.py.
+            # A matra i drawn in front of one of them is written behind the
+            # whole of it, which only a token of its own says
+            'PHARA'     : uMap['PHA'] + halant + uMap['RA'],  \
+            'DDARA'     : uMap['DDA'] + halant + uMap['RA'],  \
+            'SHALA'     : uMap['SHA'] + halant + uMap['LA'],  \
+            'LALA'      : uMap['LA']  + halant + uMap['LA'],  \
+            'TTHAYA'    : uMap['TTHA'] + halant + uMap['YA'], \
+            'SARA'      : uMap['SA'] + halant + uMap['RA'],   \
+            'SATARA'    : uMap['SA'] + halant + uMap['TA'] + halant + uMap['RA'], \
+
             # the candra a of ॲन्टॉप हिल, a letter of the devanagari block
             # that langs/devanagari.py has no token for
             'CHANDRA_A' : 'ॲ', \
@@ -174,4 +186,9 @@ class DVOTSurekh(BaseLang):
             # वर्षां. The reph of this one is drawn behind the syllable, so
             # it is ADHA_RA and moves back over it
             'MATRAAABINDURI' : ['ADHA_RA', 'MATRA_AA', 'BINDU'], \
+
+            # THE ANUSVAR THAT CARRIES A REPH, the glyph of सर्वंकष, drawn
+            # on the letter after the reph's own: the reph moves back over
+            # that letter and the anusvar stays on it
+            'BINDURI'        : ['ADHA_RA', 'BINDU'], \
         }

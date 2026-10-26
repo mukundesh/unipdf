@@ -263,6 +263,24 @@ their last versions are in `tools/retired/`. Finding: `--font-map
 DVB-TTYogesh=yogesh` converts most of c011 but not the glyphs Word put in the
 `DVB-TTYogesh+1` font object, which is the input-adapter work of D-17/OQ-8.
 
+**After M5 — legacy fonts left out (D-19, 2026-10-26).** No input adapter:
+legacy 8-bit fonts are recognised by family name (`convert/legacy.py`) and
+not read. Their words become legacy regions (`Page.legacy_regions`, a
+`⟦8bit:N⟧` placeholder in the text, `unipdf regions`, `legacy_font` issue);
+the `--font-map` hint is gone. The parity gate and the reference pipeline
+run with `legacy="keep"`; `tests/test_legacy.py` checks that only legacy
+fonts change. `tools/legacy_font_docs.py` lists the mahfin2 documents with a
+legacy font from `pdfinfos/`.
+
+**After M5 — the mahagri2024 comparison (D-20, D-21, 2026-10-27).**
+`tools/compare_docint.py` matches unipdf's words by box against another
+pipeline's `doc.json` for 1,551 documents. What it showed wrong in unipdf
+was fixed: ActualText that Word writes wrong is no longer used (D-20), and
+indic2unicode's Sakal Marathi, Mangal, Nirmala UI and Kokila handling was
+changed upstream (D-21). Words where only unipdf's spelling is impossible
+went from 2,141 to 141, U+FFFD from 608 to 0; the golden text was rebuilt
+(`tools/make_golden.py`) and changed only where it was wrong.
+
 
 1. `unipdf words` (TSV/JSON), `glyphs`, `json`, `fonts` (UP-CLI-1);
    stderr summary of missing conversions (UP-CLI-2); exit codes.
@@ -323,6 +341,8 @@ it.
 | `test_cli.py` | UP-CLI-* | M5 |
 | `test_json.py` | UP-MD-1, -2 (JSON_SCHEMA.md) | M5 |
 | `test_strings.py` | UP-API-2 | M5 |
+| `test_legacy.py` | D-19 | after M5 |
+| `test_actual_text.py` | D-20 | after M5 |
 
 ## 5. Order and parallelism
 

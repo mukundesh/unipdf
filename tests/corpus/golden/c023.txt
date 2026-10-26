@@ -50,7 +50,7 @@ Nodal Bank Account उघडावे. त्यासोबतच योजन�
 
 सर्व संबंधित प्रशाासकीय विभागांनी Single Nodal Agency आणि Nodal Officer यांच्या नियुक्तीचे आदेश 
 
-दिनांक ०५ जुलै, २०२१ पयंत निर्गमित करावेत व त्याची एक प्रत वित्त विभाग आणि नियोजन विभागास उपलब्ध 
+दिनांक ०५ जुलै, २०२१ पर्यंत निर्गमित करावेत व त्याची एक प्रत वित्त विभाग आणि नियोजन विभागास उपलब्ध 
 
 करुन द्यावी.  
 
@@ -85,7 +85,7 @@ Nodal Bank Account उघडावे. त्यासोबतच योजन�
 ५. 
 सर्व विभागांनी  Single Nodal Agency अधिकाऱ्यांची नांवे वित्त विभाग आणि नियोजन विभागास तात्काळ 
 
-उपलब्ध करुन द्यावीत. तसेच केंद्र पुरस्कृत योजनांच्या बाबतीत PFMS अंतगंत कामकाजाचे संनियंत्रण व 
+उपलब्ध करुन द्यावीत. तसेच केंद्र पुरस्कृत योजनांच्या बाबतीत PFMS अंतर्गंत कामकाजाचे संनियंत्रण व 
 
 समन्वयन करण्याकरिता नियोजन विभागानेदेखील किमान उपसचिव दर्जाच्या नोडल अधिकारी यांची नेमणूक 
 
@@ -277,7 +277,7 @@ Government.
 
 संबंधित प्रशासकीय विभाग  
 
-दि.५ जुलै, २०२१ पयंत 
+दि.५ जुलै, २०२१ पर्यंत 
 
 २. In case of Umbrella schemes which have multiple sub-schemes, if 
 needed, the State Governments may designate separate SNAs for sub-
@@ -285,7 +285,7 @@ schemes of the Umbrella Scheme with separate Single Nodal Accounts.
 
 संबंधित प्रशासकीय विभाग 
 
-दि.५ जुलै, २०२१ पयंत 
+दि.५ जुलै, २०२१ पर्यंत 
 
 ३. Implementing Agencies (IAs) down the ladder should use the SNA's 
 account with clearly defined drawing limits set for that account. 
@@ -295,7 +295,7 @@ either in the same branch of the selected bank or in different branches.
 
 संबंधित प्रशासकीय विभाग 
 
-दि.१२ जुलै, २०२१ पयंत 
+दि.१२ जुलै, २०२१ पर्यंत 
 
 ४. All zero balance subsidiary accounts will have allocated drawing limits 
 to be decided by the SNA concerned from time to time and will draw 
@@ -305,7 +305,7 @@ The available drawing limit will get reduced by the extent of utilization.
 
 संबंधित प्रशासकीय विभाग 
 
-दि.१२ जुलै, २०२१ पयंत 
+दि.१२ जुलै, २०२१ पर्यंत 
 
 ५. For seamless management of funds, the main account and all zero 
 balance subsidiary accounts should preferably be maintained with the 
@@ -314,7 +314,7 @@ opening Single Nodal Accounts of different CSS.
 
 संबंधित प्रशासकीय विभाग  
 
-दि.१२ जुलै, २०२१ पयंत 
+दि.१२ जुलै, २०२१ पर्यंत 
 
 ६. Only banks having a robust IT Systems and extensive branch network 
 should be chosen for opening the Single Nodal Account of each CSS. 
@@ -328,7 +328,7 @@ utilization of funds by IAs.
 
 आणि नियोजन विभाग 
 
-दि.१५ जुलै, २०२१ पयंत 
+दि.१५ जुलै, २०२१ पर्यंत 
 
 ७. The bank's software system should be able to monitor the drawing limits 
 of the IAs who should be able to draw funds on real time basis from the 

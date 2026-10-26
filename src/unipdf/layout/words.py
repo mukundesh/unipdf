@@ -16,6 +16,10 @@ Then the spaces the extraction put inside a word are removed (D-12):
 
 Glyphs the converter dropped (UP-AL-7) join the word of their row that
 contains, or is nearest to, their centre.
+
+Words with a glyph in a legacy 8-bit font (D-19) keep their box and raw text
+but get no text. Consecutive ones on a line make a legacy region, and the
+line's text holds one placeholder (`⟦8bit:N⟧`) in place of the region.
 """
 
 from __future__ import annotations
@@ -26,8 +30,10 @@ from dataclasses import dataclass, field
 from itertools import chain
 
 from unipdf.attributes import font_run, word_attributes
+from unipdf.convert.legacy import PLACEHOLDER
+from unipdf.convert.resolve import RULE_LEGACY
 from unipdf.issues import JOINED_WORDS, IssueBag
-from unipdf.model import Cluster, FontRun, Glyph, Line, Page, Run, Word, union
+from unipdf.model import Cluster, FontRun, Glyph, LegacyRegion, Line, Page, Run, Word, union
 from unipdf.pdf.glyphs import RawLine
 
 # characters that cannot begin a Devanagari word (UP-LY-5 J1)
@@ -169,11 +175,21 @@ def _font_runs(w: _Word, gl: list[Glyph], glyphs: list[Glyph], font_of) -> list[
             for k, grp in enumerate(groups)]
 
 
+def _ink(gl: list[Glyph]) -> list[Glyph]:
+    return [g for g in gl if not g.synthetic and not g.text.isspace()]
+
+
+def _is_legacy_word(gl: list[Glyph], legacy: set[str]) -> bool:
+    """a word with an ink glyph in a legacy font (D-19)"""
+    return any(g.font in legacy for g in _ink(gl))
+
+
 def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
-               extra: list[int], coarse: set[int], font_of) -> Word:
+               extra: list[int], coarse: set[int], font_of, legacy: set[str]) -> Word:
     gset = set().union(*(p.glyphs for p in w.parts), extra)
     gl = [glyphs[i] for i in sorted(gset)]
-    ink = [g for g in gl if not g.synthetic and not g.text.isspace()]
+    ink = _ink(gl)
+    is_legacy = _is_legacy_word(gl, legacy)
     ids: list[int] = []
     for g in gl:
         if g.actual_text:
@@ -182,11 +198,14 @@ def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
             ids.append(g.glyph_id)
     sizes = Counter(g.size for g in ink)
     runs = _font_runs(w, gl, glyphs, font_of)
+    if is_legacy:
+        for fr in runs:
+            fr.text = ""
     bold, bold_ev, italic, italic_ev = word_attributes(runs)
     return Word(
         index=index,
         line=line_index,
-        text=w.text,
+        text="" if is_legacy else w.text,
         raw_text="".join(g.text for g in gl),
         bbox=union(g.bbox for g in ink),
         glyphs=[g.index for g in gl],
@@ -197,7 +216,7 @@ def _make_word(index: int, line_index: int, w: _Word, glyphs: list[Glyph],
         join_rules=list(w.rules) or None,
         unattributed=sorted(extra),
         # where every glyph has its own provenance (UP-AL-5)
-        clusters=None if gset & coarse else _clusters(w, glyphs),
+        clusters=None if is_legacy or gset & coarse else _clusters(w, glyphs),
         sizes=sorted(sizes),
         font_runs=runs,
         bold=bold,
@@ -230,6 +249,54 @@ def _attach_unattributed(words: list[_Word], lines: list[RawLine], glyphs: list[
     return extra
 
 
+def _regions(page: Page, line_index: int, words: list[Word], legacy: set[str]) -> None:
+    """consecutive legacy words of a line -> legacy regions of the page"""
+    group: list[Word] = []
+    for w in [*words, None]:
+        if w is not None and _is_legacy_word([page.glyphs[gi] for gi in w.glyphs], legacy):
+            group.append(w)
+            continue
+        if group:
+            region = LegacyRegion(
+                index=len(page.legacy_regions), line=line_index,
+                bbox=union(x.bbox for x in group),
+                fonts=list(dict.fromkeys(f for x in group for f in x.fonts if f in legacy)),
+                words=[x.index for x in group],
+                raw_text=" ".join(x.raw_text for x in group))
+            page.legacy_regions.append(region)
+            for x in group:
+                x.region = region.index
+            group = []
+
+
+def _line_text(toks: list[_Tok], dropped: set[int], tok_word: dict[int, int],
+               words: list[Word]) -> str:
+    """the row's text, a legacy region's words and the spaces between them
+    given as one placeholder"""
+    region_at: list[int | None] = [None] * len(toks)  # the region a token belongs to
+    for ti, wi in tok_word.items():
+        region_at[ti] = words[wi].region
+    prev = None  # the region of the last word
+    for ti in range(len(toks)):  # a space between two words of one region
+        if not toks[ti].space:
+            prev = region_at[ti]
+        elif prev is not None:
+            nxt = next((region_at[k] for k in range(ti + 1, len(toks)) if not toks[k].space),
+                       None)
+            if nxt == prev:
+                region_at[ti] = prev
+    out = []
+    for ti, t in enumerate(toks):
+        if ti in dropped:
+            continue
+        r = region_at[ti]
+        if r is None:
+            out.append(t.text)
+        elif ti == 0 or region_at[ti - 1] != r:
+            out.append(PLACEHOLDER.format(r + 1))
+    return "".join(out)
+
+
 def layout_page(
     page: Page,
     raw_lines: list[RawLine],
@@ -243,6 +310,8 @@ def layout_page(
     """fill page.lines and page.words from rows of rawdict lines. font_of(name)
     gives the font record that bold and italic come from"""
     glyphs = page.glyphs
+    legacy = {g.font for g in glyphs
+              if getattr(font_of(g.font), "rule", None) == RULE_LEGACY}
     runs_by_line: dict[tuple[int, int], list[Run]] = {}
     logical: set[int] = set()
     coarse: set[int] = set()  # glyphs of runs with run-level provenance
@@ -256,6 +325,7 @@ def layout_page(
         toks = _row_tokens(row, runs_by_line)
         line_index = len(page.lines)
         words: list[_Word] = []
+        tok_word: dict[int, int] = {}  # token -> its word
         dropped_seps: set[int] = set()
         pending_sep: tuple[int, _Tok] | None = None
         for ti, tok in enumerate(toks):
@@ -274,25 +344,29 @@ def layout_page(
             if rule is not None:
                 words[-1].parts.append(tok)
                 words[-1].rules.append(rule)
+                tok_word[ti] = len(words) - 1
                 dropped_seps.add(pending_sep[0])
                 issues.add(severity="info", code=JOINED_WORDS, page=page.index,
                            message=f"{words[-1].parts[-2].text!r} + {tok.text!r} ({rule})",
                            context={"line": line_index, "rule": rule})
             else:
                 words.append(_Word([tok]))
+                tok_word[ti] = len(words) - 1
             pending_sep = None
 
         extra = _attach_unattributed(words, row, glyphs)
         first = len(page.words)
         for k, w in enumerate(words):
             page.words.append(_make_word(first + k, line_index, w, glyphs, extra[k], coarse,
-                                         font_of))
+                                         font_of, legacy))
         line_words = page.words[first:]
+        if legacy:
+            _regions(page, line_index, line_words, legacy)
         page.lines.append(Line(
             index=line_index,
             block=row[0].block,
             bbox=union(w.bbox for w in line_words),
-            text="".join(t.text for ti, t in enumerate(toks) if ti not in dropped_seps),
+            text=_line_text(toks, dropped_seps, tok_word, line_words),
             words=[w.index for w in line_words],
             sources=[(ln.block, ln.line) for ln in row],
         ))

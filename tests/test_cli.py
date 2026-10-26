@@ -56,20 +56,20 @@ def test_words_tsv(capsys):
     assert main(["words", "-p", "1", str(corpus_pdf("c003"))]) == 0
     rows = [r.split("\t") for r in capsys.readouterr().out.splitlines()]
     assert rows[0] == ["page", "line", "word", "x0", "y0", "x1", "y1", "font", "size", "bold",
-                       "italic", "text", "raw_text"]
+                       "italic", "region", "text", "raw_text"]
     assert rows[1][:3] == ["1", "1", "1"]
-    assert rows[1][11] == "हिंदी"
+    assert rows[1][11:13] == ["", "हिंदी"]
     assert all(len(r) == len(rows[0]) for r in rows)
 
 
 def test_words_json(capsys):
     import json
 
-    assert main(["words", "--format", "json", str(corpus_pdf("c003"))]) == 0
+    assert main(["words", "--format", "json", str(corpus_pdf("c006"))]) == 0
     records = json.loads(capsys.readouterr().out)
-    assert records[0]["text"] == "हिंदी"
-    assert records[0]["glyph_ids"] == [465, 161, 562, 145, 547]
-    assert records[0]["glyphs"] == [1, 2, 3, 4]
+    assert records[0]["text"] == "पश्चिम"
+    assert records[0]["glyph_ids"] == [269, 302, 686, 273]  # श्चि is ActualText
+    assert records[0]["glyphs"] == [1, 2, 3]
 
 
 def test_glyphs_tsv_links_words(capsys):
@@ -100,14 +100,37 @@ def test_cell_escapes():
     assert cell([1, 2]) == "1 2"
 
 
-def test_missing_conversion_summary(capsys):
-    # UP-CLI-2: c011's DVB-TTYogesh has no converter; text still comes out, exit 0
+def test_missing_text_summary(capsys):
+    # UP-CLI-2: c011's DVB-TTYogesh is left out (D-19); exit 0
     assert main(["text", "-p", "1", str(corpus_pdf("c011"))]) == 0
-    err = capsys.readouterr().err
-    assert "DVB-TTYogesh has no converter" in err and "(no_converter)" in err
-    assert "--font-map 'DVB-TTYogesh=yogesh'" in err
+    out, err = capsys.readouterr()
+    assert "DVB-TTYogesh is a legacy 8-bit font (dv-tt)" in err and "(legacy_font)" in err
+    assert "DVB-TTYogesh+1" not in err  # counted with DVB-TTYogesh
+    assert "⟦8bit:1⟧" in out
     assert main(["text", str(corpus_pdf("c002"))]) == 0
     assert capsys.readouterr().err == ""
+
+
+def test_regions(capsys):
+    import json
+
+    assert main(["regions", "-p", "1", str(corpus_pdf("c011"))]) == 0
+    rows = [r.split("\t") for r in capsys.readouterr().out.splitlines()]
+    assert rows[0] == ["page", "region", "line", "x0", "y0", "x1", "y1", "font", "words",
+                       "raw_text"]
+    assert [r[1] for r in rows[1:4]] == ["1", "2", "3"]
+    assert main(["regions", "--format", "json", "-p", "1", str(corpus_pdf("c011"))]) == 0
+    first = json.loads(capsys.readouterr().out)[0]
+    assert first["region"] == 1 and first["words"] == [1, 2, 3]
+    assert main(["words", "-p", "1", str(corpus_pdf("c011"))]) == 0
+    word = capsys.readouterr().out.splitlines()[1].split("\t")
+    assert word[11:13] == ["1", ""]  # region 1, no text
+
+
+def test_keep_legacy(capsys):
+    assert main(["text", "--keep-legacy", "-p", "1", str(corpus_pdf("c011"))]) == 0
+    out, err = capsys.readouterr()
+    assert "8bit" not in out and "legacy_font" not in err
 
 
 def test_unreadable_pdf_exits_1(tmp_path, capsys):

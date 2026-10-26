@@ -2019,6 +2019,16 @@ NIRMALA_UI_MALAYALAM = { \
 NIRMALA_UI_4595 = dict(NIRMALA_UI_TELUGU)
 NIRMALA_UI_4595.update(NIRMALA_UI_MALAYALAM)
 
+# The numbering of 4923 glyphs that the agriculture department's Word
+# exports carry Nirmala UI in. Its subsets keep the GSUB of the font, so they
+# need no table but for one glyph, the eyelash ra of होणाऱ्या, which the GSUB
+# makes out of a ra and a virama and so spells like the reph. The reph is
+# written in front of the syllable it is drawn on and the eyelash ra is not,
+# so read as a reph it turns होणाऱ्या into होर्णाया. The table spells it as
+# the letter it is, which is that ra with a nukta - see fix_font
+NIRMALA_UI_4923_GLYPH_COUNT = 4923
+NIRMALA_UI_4923 = {820: 'ऱ्'}
+
 # THE MARATHI OF THE MUMBAI SUBURBAN SUPPLEMENT
 #
 # The DVOT family is broken in a way of its own again, and it is the mildest
@@ -2098,9 +2108,38 @@ DVOT_SUREKH = { \
 # table. The text of a repaired pdf goes through fonts/marathi/sakal.py,
 # which reads the two numberings of that gazette as well
 SAKAL_MARATHI = dict(DVOT_SUREKH)
+
+# The glyph count of the font program SAKAL_MARATHI was read from, and of
+# every subset of it the Konkan supplement and the agriculture department's
+# Word exports carry. Sakal Marathi is carried in a numbering of 4245 glyphs
+# as well, whose subsets keep their cmap, their post names and their GSUB and
+# so say what their glyphs are themselves; this table read into one of them
+# turns व्यय into ौंयय, glyph 538 being matra_au with the anusvar here and
+# something else there. The guard keeps it to the numbering it was read off
+SAKAL_MARATHI_GLYPH_COUNT = 713
 SAKAL_MARATHI.update({\
     # the half kha of संख्या, and the two conjuncts of याद्वारे and निश्चिती \
     176: 'ख्', 462: 'द्व', 473: 'श्च',                            \
+    # what the Word exports of the Maharashtra agriculture department draw
+    # beside them, each read off the page image of the word it stands in -
+    # those exports map every one of these to U+FFFD. The quotes of
+    # ‘आदिवासी’ and केंद्र’ \
+    48: '‘',    49: '’',    666: '’',                             \
+    # the dead consonants of प्युरीफाईड्स, प्रोडक्ट्स and प्रॉडक्टस्, the
+    # half pha of फ्लेक्झी and the half ya of सहाय्य \
+    185: 'ट्',  187: 'ड्',  238: 'स्',  196: 'फ्',  200: 'य्',   \
+    # the conjuncts of रीफ्रेशमेंट्स, ड्रोन, अन्नद्रव्य, भट्टड, विठ्ठलदास,
+    # शाश्वत, विश्लेषण, सल्ला, मोठ्या, मॉड्यूल्स, स्रोत and शास्त्र, and the
+    # half tta of महत्त्वाकांक्षी \
+    291: 'फ्र', 282: 'ड्र', 400: 'न्न', 442: 'ट्ट', 445: 'ठ्ठ',  \
+    474: 'श्व', 495: 'श्ल', 498: 'ल्ल', 504: 'ठ्य', 505: 'ड्य',  \
+    483: 'स्र',  485: 'स्त्र', 451: 'त्त्',                       \
+    # the anusvar with a reph on it of सर्वंकष, and matra_au with the
+    # anusvar of दौंड \
+    522: 'ंर्', 538: 'ौं',                                         \
+    # the da with matra_ri inside it of दूरदृष्टी, which those exports map
+    # to a plain da rather than leave empty \
+    467: 'दृ',                                                      \
 })
 
 class GlyphNumberings(dict):
@@ -2122,6 +2161,20 @@ class GlyphNumberings(dict):
 # see FREE_SERIF_OUTLINES below, so it has no table of its own here. The
 # entry is what puts the font on the list of the ones that are repaired at all
 FREE_SERIF = {}
+
+# Kokila, the devanagari of Microsoft that Word carries the way it carries
+# Mangal, and whose map it breaks the same way: the glyphs of a run paired
+# with its characters one by one, the pairing slipping on the glyphs shaping
+# moved, so विभागाच्या extracts as षिभागाच्या and शासन as िासन. Its subsets
+# keep a cmap, a post and a GSUB, which say what most of its glyphs are, and
+# the text of a repaired pdf is read by fonts/glyphs/mangal_glyphs.py, Kokila
+# drawing in the order Mangal does. The two glyphs below are the ones those
+# subsets name nowhere, each read off the page image of the word it stands
+# in - the reph of आर्थिक, निर्णय and लेखाशीर्ष, which the map pairs with the
+# matra i in front of it, and the half kha of सांख्यिकी. The 723 glyphs of
+# the font they were read off are what KOKILA_GLYPH_COUNT holds the table to
+KOKILA = {170: 'र्', 180: 'ख्'}
+KOKILA_GLYPH_COUNT = 723
 
 # FreeSerif, the GNU FreeFont serif, which the Kerala gazette sets a
 # commissionerate's notifications in as it sets others in Meera. It is a
@@ -2359,7 +2412,8 @@ BROKEN_FONTS = {'Arial Unicode MS'  : ARIAL_UNICODE_MS,   \
                 'Nirmala UI'        : GlyphNumberings({ \
                     NIRMALA_UI_GLYPH_COUNT       : NIRMALA_UI, \
                     NIRMALA_UI_ODIYA_GLYPH_COUNT : NIRMALA_UI_ODIYA, \
-                    NIRMALA_UI_TELUGU_GLYPH_COUNT: NIRMALA_UI_4595}), \
+                    NIRMALA_UI_TELUGU_GLYPH_COUNT: NIRMALA_UI_4595, \
+                    NIRMALA_UI_4923_GLYPH_COUNT  : NIRMALA_UI_4923}), \
                 # the one numbering of Mangal that a table was read
                 # off, the 890 glyph font that Word subsets. The
                 # gazettes whose Mangal is renumbered per subset get
@@ -2407,6 +2461,7 @@ BROKEN_FONTS = {'Arial Unicode MS'  : ARIAL_UNICODE_MS,   \
                 # its glyphs draw for the same reason - see
                 # FREE_SERIF_OUTLINES \
                 'FreeSerif'                : FREE_SERIF, \
+                'Kokila'                   : KOKILA, \
                 # the telugu of the Andhra Pradesh gazette. Its map is a
                 # positional split of the cluster rather than a reading of
                 # the glyphs, and the font itself says what they are - see
@@ -2475,7 +2530,9 @@ RE_ENCODED_FONTS = {'TAU-Marutham', 'TAU-Marutham-SC700', 'Meera', \
 BROKEN_FONT_GLYPH_COUNTS = {'NudiUni01e'      : NUDI_UNI_GLYPH_COUNT,  \
                             'NudiUni01k'      : NUDI_UNI_GLYPH_COUNT,  \
                             'NudiUni02e'      : NUDI_UNI_GLYPH_COUNT,  \
-                            'NudiUniAnanth05e': NUDI_UNI_GLYPH_COUNT}
+                            'NudiUniAnanth05e': NUDI_UNI_GLYPH_COUNT, \
+                            'SakalMarathi'    : SAKAL_MARATHI_GLYPH_COUNT, \
+                            'Kokila'          : KOKILA_GLYPH_COUNT}
 
 # the font whose glyph ids a type3 font of a distilled gazette names its
 # glyphs after, see fix_type3_fonts below
@@ -2513,6 +2570,7 @@ SIMPLE_ENCODINGS      = {name: {char: byte for byte, char in chars.items()} \
 FONT_CONVERTERS = {'Arial Unicode MS'  : 'arialuni_glyphs',   \
                    'Nirmala UI'        : 'nirmalaui_glyphs', \
                    'Mangal'            : 'mangal_glyphs',    \
+                   'Kokila'            : 'mangal_glyphs',    \
                    'NudiUni01e'        : 'nudiuni_glyphs',   \
                    'NudiUni01k'        : 'nudiuni_glyphs',   \
                    'NudiUni02e'        : 'nudiuni_glyphs',   \
@@ -2620,6 +2678,10 @@ DEAD_FORM_FEATURES = frozenset(['haln'])
 # and less of it, and there the table is the reading that stands - see
 # fix_font. This is what takes a mark back out of a string to ask whether
 # the two say the same thing
+# the nukta, which the eyelash ra of marathi carries in unicode and which a
+# font's GSUB does not spell, see NIRMALA_UI_4923
+NUKTA = '\u093c'
+
 FORM_MARKS = {ord(mark): None \
               for mark in (kannada.ARKAVATTU_MARK, odiya.REPH_MARK, \
                            telugu.PREBASE_RA_MARK)}
@@ -3328,7 +3390,17 @@ class ToUnicodeFixer:
         # wherever it slipped - this is the Mangal of union-mangal.pdf, whose
         # map has no hole anywhere and names 100 of its glyphs wrong,
         # see MANGAL
-        if outlinefixes and not glyphfixes and not self.has_map_holes(table):
+        #
+        # Nor is a subset that names every glyph its map holds. Then what the
+        # font says covers every glyph the document draws in it, so the
+        # repair is whole again and there is no part of the map left to
+        # read wrong beside it - the Mangal of 886 glyphs of the agriculture
+        # department's Word exports is such a subset, whose map hands the
+        # matra i of दिनांक the da it is drawn in front of (दद, ददनाांक) and
+        # whose GSUB says that glyph 465 is the matra i. Its bold, which
+        # names 19 of the glyphs it draws nowhere, is still left as it is
+        if outlinefixes and not glyphfixes and not self.has_map_holes(table) \
+                and not all(code in strings for code in table):
             self.logger.debug('Font %d (%s) has no hole in its map, so it ' \
                               'is not the one the outline table was read ' \
                               'for and is left as it is', xref, fontname)
@@ -3346,14 +3418,28 @@ class ToUnicodeFixer:
             if correct == None:
                 correct = handed
             elif handed != None and handed != correct and \
-                    handed.translate(FORM_MARKS) == correct:
+                    (handed.translate(FORM_MARKS) == correct or \
+                     unicodedata.normalize('NFD', handed).replace(NUKTA, '') \
+                     == correct):
                 # what the font says and what the table says are the same
                 # string but for the mark that the table writes into it,
                 # which says which of the two glyphs that spell that string
                 # was drawn. The font cannot say that here - it says it in a
                 # chaining rule and a lookup is read on its own - so the
                 # table is the fuller of the two readings and is the one
-                # that stands, see FORM_MARKS
+                # that stands, see FORM_MARKS. The eyelash ra of marathi is
+                # such a glyph as well, the ra with a nukta that the font
+                # spells as the ra it is made of, see NIRMALA_UI_4923
+                correct = handed
+            elif handed != None and handed != correct and \
+                    sorted(handed) == sorted(correct):
+                # the same characters in another order. The GSUB spells a
+                # ligature out of its components in the order the shaper met
+                # them, which for a stacked conjunct is not the order unicode
+                # writes it in - glyph 485 of SakalMarathi is made of the
+                # half sa, the rakar and the ta and is spelled स्र्त, where
+                # the word is स्त्री - so the table, which was read off the
+                # page, is the one that stands
                 correct = handed
             if correct == None and outlinefixes:
                 # a font whose subsets are renumbered, so the glyph is looked
@@ -3368,6 +3454,7 @@ class ToUnicodeFixer:
             fixed[code] = correct if correct != None else ustr
 
         num += self.add_missing_glyphs(doc, xref, fixed, glyphfixes)
+        num += self.add_named_glyphs(doc, xref, fixed, strings)
 
         if num:
             doc.update_stream(cmapxref, self.build_cmap(fixed), compress = True)
@@ -3570,6 +3657,27 @@ class ToUnicodeFixer:
             num += 1
             self.logger.debug('Font %d glyph %d: no entry -> %r', \
                               xref, code, correct)
+        return num
+
+    def add_named_glyphs(self, doc, xref, fixed, strings):
+        '''put back the glyphs the map has no entry for that the font itself
+           names - its cmap, its post names, its GSUB. An extractor writes a
+           glyph that has no entry as its glyph id, so the Mangal of 886
+           glyphs that the agriculture department's Word exports carry under
+           the name CIDFont+F1 extracts न्यायालयात as Ûयायालयात and अंतिम as
+           अंǓतम, its map leaving out the glyphs the shaper made, while its
+           GSUB spells every one of them. What the font says about a glyph is
+           what the walk above trusts it for, so this adds nothing the walk
+           would not have written had the map had an entry'''
+        count = self.glyph_count(doc, xref)
+        num   = 0
+        for code, ustr in strings.items():
+            if code in fixed or (count != None and code >= count):
+                continue
+            fixed[code] = ustr
+            num += 1
+            self.logger.debug('Font %d glyph %d: no entry -> %r (the font)', \
+                              xref, code, ustr)
         return num
 
     # ------------------------------------------------------------------

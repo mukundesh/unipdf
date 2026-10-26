@@ -2,9 +2,10 @@
 
 `unipdf text` gives the text as visual rows with split words joined.
 `unipdf words` / `glyphs` give one row per word / glyph; `json` the model.
-`unipdf show` draws word and akshara boxes over the page images.
-`--rawdict-lines --no-join --convert-actual-text` gives R's text byte for byte
-(UP-VF-4a).
+`unipdf regions` lists the regions of words in legacy 8-bit fonts, which the
+text leaves out (D-19). `unipdf show` draws word and akshara boxes over the
+page images. `--rawdict-lines --no-join --convert-actual-text --keep-legacy`
+gives R's text byte for byte (UP-VF-4a).
 
 The words and glyphs tables number pages, lines, words and glyphs from 1, as
 `-p` does; the JSON model numbers from 0. Text that would be missing from the
@@ -24,7 +25,7 @@ from collections import defaultdict
 
 from unipdf.issues import (
     CONVERTER_ERROR,
-    EXTRACTION_MISMATCH,
+    LEGACY_FONT,
     NO_CONVERTER,
     REPAIR_FAILED,
     UNCONVERTED_CHAR,
@@ -94,6 +95,7 @@ def read(args):
         rawdict_lines=args.rawdict_lines,
         j2=args.j2,
         actual_text="convert" if args.convert_actual_text else "bypass",
+        legacy="keep" if args.keep_legacy else "skip",
     )
 
 
@@ -105,7 +107,8 @@ def summary(doc) -> list[str]:
     by_code = defaultdict(list)
     for issue in doc.issues:
         by_code[issue.code].append(issue)
-    lines = [f"{i.message} ({NO_CONVERTER})" for i in by_code[NO_CONVERTER]]
+    lines = [f"{i.message} ({code})" for code in (LEGACY_FONT, NO_CONVERTER)
+             for i in by_code[code]]
     for code, what in (
         (UNCONVERTED_CHAR, "characters had no token in their converter and are missing"),
         (CONVERTER_ERROR, "runs failed to convert and are left as in the PDF"),
@@ -115,10 +118,6 @@ def summary(doc) -> list[str]:
             fonts = ", ".join(sorted({i.font for i in found if i.font}))
             lines.append(f"{len(found)} {what} ({code})" + (f": {fonts}" if fonts else ""))
     lines.extend(f"{i.message} ({REPAIR_FAILED})" for i in by_code[REPAIR_FAILED])
-    if by_code[EXTRACTION_MISMATCH]:
-        pages = ", ".join(str(i.page + 1) for i in by_code[EXTRACTION_MISMATCH])
-        lines.append(f"ActualText could not be matched to glyphs on page(s) {pages} "
-                     f"({EXTRACTION_MISMATCH})")
     return lines
 
 
@@ -163,8 +162,18 @@ def word_records(doc) -> list[dict]:
                 "bold": w.bold, "italic": w.italic, "text": w.text, "raw_text": w.raw_text,
                 "glyphs": [g + 1 for g in w.glyphs], "glyph_ids": w.glyph_ids,
                 "joined_from": w.joined_from,
+                "region": None if w.region is None else w.region + 1,
             })
     return out
+
+
+def region_records(doc) -> list[dict]:
+    """`regions`: one record per legacy region (D-19), numbered from 1 as the
+    placeholders in the text are"""
+    return [{"page": page.index + 1, "region": r.index + 1, "line": r.line + 1,
+             "bbox": _box(r.bbox), "fonts": r.fonts, "words": [w + 1 for w in r.words],
+             "raw_text": r.raw_text}
+            for page in doc.pages for r in page.legacy_regions]
 
 
 def glyph_records(doc) -> list[dict]:
@@ -198,10 +207,17 @@ def _tsv(columns: list[str], rows: list[list]) -> str:
 
 def words_tsv(records: list[dict]) -> str:
     cols = ["page", "line", "word", "x0", "y0", "x1", "y1", "font", "size", "bold", "italic",
-            "text", "raw_text"]
+            "region", "text", "raw_text"]
     return _tsv(cols, [[r["page"], r["line"], r["word"], *(r["bbox"] or [None] * 4),
-                        "; ".join(r["fonts"]), r["size"], r["bold"], r["italic"], r["text"],
-                        r["raw_text"]] for r in records])
+                        "; ".join(r["fonts"]), r["size"], r["bold"], r["italic"], r["region"],
+                        r["text"], r["raw_text"]] for r in records])
+
+
+def regions_tsv(records: list[dict]) -> str:
+    cols = ["page", "region", "line", "x0", "y0", "x1", "y1", "font", "words", "raw_text"]
+    return _tsv(cols, [[r["page"], r["region"], r["line"], *(r["bbox"] or [None] * 4),
+                        "; ".join(r["fonts"]), len(r["words"]), r["raw_text"]]
+                       for r in records])
 
 
 def glyphs_tsv(records: list[dict]) -> str:
@@ -254,6 +270,15 @@ def cmd_words(args) -> int:
     return 0
 
 
+def cmd_regions(args) -> int:
+    doc = read(args)
+    report(doc)
+    records = region_records(doc)
+    write_output(json_records(records) if args.format == "json" else regions_tsv(records),
+                 args.output)
+    return 0
+
+
 def cmd_glyphs(args) -> int:
     doc = read(args)
     report(doc)
@@ -302,7 +327,7 @@ def add_common(p: argparse.ArgumentParser, output_help: str = "output file (defa
     p.add_argument("--no-repair", action="store_true", help="do not repair ToUnicode maps")
     p.add_argument("--font", help="use this converter for every font")
     p.add_argument("--font-map", action="append", metavar="FONT=CONVERTER",
-                   help="use CONVERTER for FONT (repeatable), e.g. DVB-TTSurekh=surekh")
+                   help="use CONVERTER for FONT (repeatable), e.g. 'Nirmala UI=nirmalaui'")
     p.add_argument("--rawdict-lines", action="store_true",
                    help="one output line per PyMuPDF line, no visual rows (the R layout)")
     p.add_argument("--no-join", action="store_true", help="do not join split words")
@@ -311,6 +336,9 @@ def add_common(p: argparse.ArgumentParser, output_help: str = "output file (defa
                         "font size (off by default; e.g. 0.15)")
     p.add_argument("--convert-actual-text", action="store_true",
                    help="run converters over /ActualText too, as R does (D-18)")
+    p.add_argument("--keep-legacy", action="store_true",
+                   help="read legacy 8-bit fonts as R does instead of leaving their words "
+                        "out (D-19)")
     p.add_argument("-v", "--verbose", action="store_true", default=argparse.SUPPRESS,
                    help="log converter and repair messages")
 
@@ -328,11 +356,18 @@ def build_parser() -> argparse.ArgumentParser:
     t.set_defaults(fn=cmd_text)
 
     w = sub.add_parser("words", help="one row per word: page, line, word, box, font, size, "
-                                     "bold, italic, text, raw text")
+                                     "bold, italic, legacy region, text, raw text")
     add_common(w)
     w.add_argument("--format", choices=["tsv", "json"], default="tsv",
                    help="tab-separated (default) or a JSON array with glyph ids")
     w.set_defaults(fn=cmd_words)
+
+    r = sub.add_parser("regions", help="one row per region of words in legacy 8-bit fonts, "
+                                       "which the text leaves out: page, box, font, words")
+    add_common(r)
+    r.add_argument("--format", choices=["tsv", "json"], default="tsv",
+                   help="tab-separated (default) or a JSON array with word numbers")
+    r.set_defaults(fn=cmd_regions)
 
     g = sub.add_parser("glyphs", help="one row per glyph: box, origin, glyph id, raw text")
     add_common(g)

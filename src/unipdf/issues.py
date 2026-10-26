@@ -18,13 +18,13 @@ Severity = Literal["info", "warning", "error"]
 REPAIR_FAILED = "repair_failed"
 NO_TEXT_LAYER = "no_text_layer"
 NO_CONVERTER = "no_converter"
+LEGACY_FONT = "legacy_font"
 UNCONVERTED_CHAR = "unconverted_char"
 CONVERTER_ERROR = "converter_error"
 UNJOINED_GLYPH = "unjoined_glyph"
 ACTUAL_TEXT = "actual_text"
 JOINED_WORDS = "joined_words"
 PROVENANCE_UNAVAILABLE = "provenance_unavailable"
-EXTRACTION_MISMATCH = "extraction_mismatch"
 
 
 @dataclass

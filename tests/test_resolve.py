@@ -4,6 +4,7 @@ import pytest
 
 from unipdf.convert.resolve import (
     RULE_FORCED,
+    RULE_LEGACY,
     RULE_NAME,
     RULE_NONE,
     RULE_READS_UNREPAIRED,
@@ -18,6 +19,11 @@ from unipdf.i2u.fontconv import FontConv
 @pytest.fixture(scope="module")
 def resolver():
     return ConverterResolver(FontConv().converters)
+
+
+@pytest.fixture(scope="module")
+def keep_resolver():
+    return ConverterResolver(FontConv().converters, legacy="keep")
 
 
 def r(resolver, name, repaired=None):
@@ -98,14 +104,38 @@ def test_sakal_reads_repaired_and_unrepaired(resolver, name):
 @pytest.mark.parametrize("name,conv", [("TM-Chanakya-Normal", "TM-Chanakya-Normal"),
                                        ("FourCMRAbhishek", "FourCMRAbhishek"),
                                        ("DVBWTTYogeshBold", "DVBWTTYogeshBold")])
-def test_legacy_fonts_by_name(resolver, name, conv):
-    assert r(resolver, name) == (conv, RULE_NAME)
+def test_legacy_fonts_by_name_when_kept(keep_resolver, name, conv):
+    # legacy="keep": R's resolution
+    assert r(keep_resolver, name) == (conv, RULE_NAME)
 
 
 @pytest.mark.parametrize("name", ["DVB-TTSurekh", "DVB-TTSurekhEN", "DVB-TTYogesh", "DVB-TTYogesh,Bold"])
-def test_dvb_tt_legacy_stays_unconverted(resolver, name):
-    # D-17: no alias until an input adapter exists
-    assert r(resolver, name) == (None, RULE_NONE)
+def test_dvb_tt_kept_is_unconverted(keep_resolver, name):
+    assert r(keep_resolver, name) == (None, RULE_NONE)
+
+
+@pytest.mark.parametrize("name,family", [
+    ("DVB-TTSurekh", "dv-tt"), ("ABCDEE+DVB-TTYogesh+1", "dv-tt"), ("DVBWTTYogeshBold", "dv-tt"),
+    ("DVTTSurekhNormal", "dv-tt"), ("DV-TTSurekh_Normal0137.5", "dv-tt"),
+    ("MG Shree", "shree-lipi"), ("SHREE-DEV7-0714", "shree-lipi"),
+    ("AkrutiDevPriya,Bold", "akruti"), ("Kruti Dev 010", "krutidev"),
+    ("TM-Chanakya-Normal", "chanakya")])
+def test_legacy_fonts_are_skipped(resolver, name, family):
+    # D-19, including fonts a converter reads by name (DVBW-TTYogesh, Chanakya)
+    res = resolver.resolve(name, {})
+    assert (res.converter, res.rule, res.matched) == (None, RULE_LEGACY, family)
+
+
+@pytest.mark.parametrize("name", ["DVOT-SurekhMR", "DVOTSurekhMRBold", "AkrutiDevPriyaUnicode",
+                                  "FourCMRAbhishek", "KrishnaUni", "Sakal Marathi", "Mangal"])
+def test_unicode_fonts_are_not_legacy(resolver, name):
+    assert resolver.resolve(name, {}).rule != RULE_LEGACY
+
+
+def test_forced_wins_over_legacy():
+    res = ConverterResolver(FontConv().converters, font_map={"DVB-TTYogesh": "yogesh"})
+    assert r(res, "DVB-TTYogesh") == ("yogesh", RULE_FORCED)
+    assert r(res, "DVB-TTSurekh") == (None, RULE_LEGACY)
 
 
 @pytest.mark.parametrize("name", ["Arial", "Times New Roman", "Calibri,Bold", "TimesNewRomanPSMT", "Wingdings"])

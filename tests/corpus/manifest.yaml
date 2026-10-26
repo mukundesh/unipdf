@@ -184,8 +184,8 @@ pdfs:
   - FCJJPH+DVB-TTYogesh
   converters: []
   reasons:
-  - legacy DVB-TTYogesh, unconverted in v1 (D-17)
-  known_bad: DVB-TTYogesh text is left as 8-bit glyph codes (D-17, needs an input adapter)
+  - legacy DVB-TTYogesh, left out (D-19)
+  known_bad: DVB-TTYogesh text is left out as legacy regions (D-19); R leaves it as 8-bit glyph codes
   id: c011
   sha256: e4cfa9cf3c552e6aaf691f12b2f8f91676a0d9a009e8c93206a0c092254776b5
   file: pdfs/c011.pdf
@@ -225,8 +225,8 @@ pdfs:
   converters:
   - sakal
   reasons:
-  - legacy DVB-TTSurekhEN beside Sakal and Mangal (D-17)
-  known_bad: DVB-TTSurekhEN text is left as 8-bit glyph codes (D-17, needs an input adapter)
+  - legacy DVB-TTSurekhEN beside Sakal and Mangal (D-19)
+  known_bad: DVB-TTSurekhEN is left out (D-19); it draws only spaces here
   id: c014
   sha256: e37f0a893b9eb46eb847c455f822b70666594bac9f30a3effa86bc8d259b5bf0
   file: pdfs/c014.pdf

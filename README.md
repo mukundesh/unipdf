@@ -23,8 +23,9 @@ Python 3.12+. Dependencies: PyMuPDF, fontTools, ply.
 ```sh
 uv run unipdf text input.pdf                      # Unicode text, pages split by --- Page Break ---
 uv run unipdf text -p 1,3-5 input.pdf -o out.txt
-uv run unipdf words input.pdf                     # TSV: page line word x0 y0 x1 y1 font size bold italic text raw_text
+uv run unipdf words input.pdf                     # TSV: page line word x0 y0 x1 y1 font size bold italic region text raw_text
 uv run unipdf words --format json input.pdf       # the same, plus glyph numbers and glyph ids
+uv run unipdf regions input.pdf                   # TSV: words in legacy 8-bit fonts, left out of the text
 uv run unipdf glyphs input.pdf                    # TSV: one row per glyph, its box, origin, glyph id, raw text
 uv run unipdf json --indent 1 input.pdf           # the whole model (specs/JSON_SCHEMA.md)
 uv run unipdf fonts input.pdf                     # converter, resolution rule, PDF font objects, bold/italic evidence
@@ -44,10 +45,11 @@ Options common to all commands:
 | `--j2 RATIO` | also join across generated spaces narrower than RATIO × size (off) |
 | `--rawdict-lines` | one output line per PyMuPDF line, no visual rows |
 | `--convert-actual-text` | run converters over `/ActualText` too |
+| `--keep-legacy` | read legacy 8-bit fonts as the old script did instead of leaving them out |
 | `-v` | log what the repair and converters say |
 
-`--rawdict-lines --no-join --convert-actual-text` gives the text of the old
-`read_pdf.py` (with its two converter-resolution bugs fixed) byte for byte.
+`--rawdict-lines --no-join --convert-actual-text --keep-legacy` gives the text
+of the old `read_pdf.py` (with its two converter-resolution bugs fixed) byte for byte.
 
 The `words` and `glyphs` tables number pages, lines, words and glyphs from 1.
 A word's `glyphs` (JSON) are numbers in the `glyphs` table of the same page.
@@ -57,8 +59,41 @@ control characters in text are escaped (`\t`, `\n`, `\\`, `\x01`).
 Text that is missing or left unconverted is summarised on stderr, e.g.
 
 ```
-unipdf: warning: DVB-TTYogesh has no converter and 4022 of its 4712 characters look like a legacy encoding (yogesh may read it: --font-map 'DVB-TTYogesh=yogesh') (no_converter)
+unipdf: warning: DVB-TTYogesh is a legacy 8-bit font (dv-tt): 584 words left out, in 69 regions (legacy_font)
 ```
+
+## Legacy 8-bit fonts
+
+Fonts like DVB-TTSurekh, DVBW-TTYogesh, MG Shree, Kruti Dev or AkrutiDevPriya
+put Devanagari glyphs on the bytes of a Latin code page, and Word's PDF
+export loses some of their characters. unipdf does not read them (D-19). It
+recognises them by font name (`src/unipdf/convert/legacy.py`) and leaves
+their words out, so that another tool, OCR for instance, can read them from
+the page image:
+
+- consecutive such words on a line form a **legacy region**, and the text
+  holds `⟦8bit:N⟧` in its place (N numbers the regions of a page from 1);
+- `unipdf regions` lists them, one row each: page, region, line, box, font,
+  number of words, raw text;
+- in `unipdf words` their `text` is empty and `region` is N; in JSON a
+  word's `region` and `page.legacy_regions` (numbered from 0) say the same.
+
+```
+$ unipdf text -p 1 c011.pdf
+⟦8bit:1⟧
+...
+$ unipdf regions -p 1 c011.pdf
+page  region  line  x0   y0     x1      y1     font                                   words  raw_text
+1     1       1     324  46.78  506.57  63.44  DVB-TTYogesh,Bold; DVB-TTYogesh,Bold+1  3      ¯Öã−ÖÔÃÖã¬ÖÖ×¸üŸÖ ...
+```
+
+A legacy font under a name no pattern knows (Word sometimes renames fonts
+`MSTT31…`) is read as plain text; if its characters look like an 8-bit
+encoding the stderr summary says so (`no_converter`). `--font-map` still
+forces a converter on a legacy font.
+
+`tools/legacy_font_docs.py pdfinfos` lists the documents of the mahfin2
+collection that use a legacy font, with their word counts.
 
 Exit status is 0 also when there are warnings, 1 when the PDF cannot be read
 (missing, not a PDF, encrypted) or an option value is wrong, 2 for usage
@@ -69,12 +104,15 @@ errors.
 ```python
 import unipdf
 
-doc = unipdf.open("input.pdf", pages=[0, 1], font_map={"DVB-TTSurekh": "surekh"})
+doc = unipdf.open("input.pdf", pages=[0, 1])
 doc.text()
 for w in doc.iter_words():
     print(w.text, w.bbox, w.raw_text, w.glyph_ids, w.size, w.bold, w.bold_evidence)
     for c in w.clusters or []:          # aksharas
         print("  ", c.text, c.bbox)
+for page in doc.pages:
+    for r in page.legacy_regions:       # words in legacy 8-bit fonts, not read
+        print(page.index, r.index, r.bbox, r.fonts, r.raw_text)
 for issue in doc.issues:
     print(issue.code, issue.message)
 doc.to_json()
@@ -93,7 +131,9 @@ unipdf.convert_with_provenance("chanakya", "fdlku")  # [("क", [1]), ("ि", [0
 2. **Glyphs.** Each glyph is one record that joins two PyMuPDF sources:
    `rawdict` gives its text and box, and `texttrace` gives its glyph id,
    origin and render mode. `/ActualText` replacements become one record
-   standing for the glyphs they replace.
+   standing for the glyphs they replace, except where the ActualText is
+   known to be wrong - it holds U+FFFD, or its font was repaired - and its
+   glyphs are read instead (D-20; Word writes both).
 3. **Runs.** Consecutive glyphs of one font on a `rawdict` line form a run. A
    run's text goes through the converter that `convert/resolve.py` picks for
    the font. One converter instance serves the whole document, as in
@@ -123,13 +163,9 @@ across a split, and ActualText left unconverted.
   with a mark (J1). A split between two consonants is left as the extraction
   made it, unless `--j2` is given. J1 is not applied to unconverted text,
   which may be in visual order.
-- **Legacy fonts with no converter.** `DVB-TTSurekh` and `DVB-TTYogesh`, for
-  example, are passed through unconverted (D-17), and the stderr warning
-  names them. `--font-map` can help, but Word splits such fonts into a second
-  "+1" font object, and its codes reach the converter in a form it does not
-  read (OQ-8).
-  - Legacy fonts that use only ASCII codes look like English text and get no
-    warning.
+- **Legacy 8-bit fonts are not read** (above). They are found by name only:
+  a renamed one is passed through as Latin text, and one that uses only
+  ASCII codes looks like English and gets no warning.
 - **Fake italic.** Word's fake italic (a slanted text matrix) is not
   detected. Only italic fonts are.
 - **Run-level boxes.** A converter with no index map would give one box per
@@ -143,6 +179,8 @@ across a split, and ActualText left unconverted.
 ```sh
 uv run pytest                 # about 2.5 min; -m "not slow" skips the largest
 tools/check_upstream.sh       # i2u/ is indic2unicode with imports rewritten only
+tools/check_upstream.sh --worktree   # ... against its uncommitted changes
+tools/sync_upstream.sh        # copy indic2unicode in again (working tree, or a commit)
 ```
 
 The parity corpus (`tests/corpus/`, 24 PDFs) holds the reference text,
@@ -155,7 +193,7 @@ hand-labelled words in `tests/hand/`.
 | Path | What |
 |---|---|
 | `specs/` | REQUIREMENTS, IMPLEMENTATION_PLAN, SPIKES, JSON_SCHEMA |
-| `src/unipdf/i2u/` | indic2unicode at `2cf31cf`, imports rewritten only (see `UPSTREAM`) |
+| `src/unipdf/i2u/` | indic2unicode at `da8994c` (D-21), imports rewritten only (see `UPSTREAM`) |
 | `src/unipdf/pipeline.py` | `unipdf.open()`: repair → glyphs → runs → rows → words |
 | `src/unipdf/model.py`, `issues.py` | Document / Page / Line / Word / Run / Glyph / Font, issues |
 | `src/unipdf/pdf/` | repair; glyph records (D-15, D-18); font records |
@@ -165,7 +203,7 @@ hand-labelled words in `tests/hand/`.
 | `src/unipdf/cli.py`, `show.py` | command line, page overlays |
 | `src/unipdf/reference.py` | the reference pipeline, the parity oracle |
 | `tests/` | tests; `i2u/` indic2unicode's testdata, `corpus/` parity corpus, `hand/` hand labels |
-| `tools/` | corpus and golden builders, `check_upstream.sh`, `retired/` old scripts |
+| `tools/` | corpus and golden builders, `check_upstream.sh` / `sync_upstream.sh`, `legacy_font_docs.py`, `compare_docint.py` (words against another pipeline's `doc.json`), `retired/` old scripts |
 | `spikes/m0/` | M0 spike scripts |
 
 ## License

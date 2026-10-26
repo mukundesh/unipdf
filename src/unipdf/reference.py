@@ -10,7 +10,8 @@ R is the oracle unipdf's own pipeline is checked against, so it depends on
 nothing in unipdf except the absorbed converters and the resolver, and it is
 kept as plain as read_pdf.py. Differences from read_pdf.py, all deliberate:
 - converter choice is ConverterResolver (no *_glyphs on unrepaired fonts, no
-  prefix matching, no lossy converter on a font whose map repair found sound);
+  prefix matching, no lossy converter on a font whose map repair found sound),
+  with legacy 8-bit fonts read as R reads them (`legacy="keep"`, D-19);
 - a page whose blocks give only whitespace is not replaced by page.get_text();
 - the PDF is opened once.
 """
@@ -111,7 +112,8 @@ def read_reference(
 
         # one FontConv per document: converters keep state between runs (sakal)
         fontconv = FontConv()
-        resolver = ConverterResolver(fontconv.converters, force=force, font_map=font_map)
+        resolver = ConverterResolver(fontconv.converters, force=force, font_map=font_map,
+                                     legacy="keep")
         selected = range(doc.page_count) if pages is None else \
             [p for p in pages if 0 <= p < doc.page_count]
 

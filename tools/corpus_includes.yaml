@@ -17,11 +17,11 @@
   reason: Mangal-Regular and Lohit-Devanagari; U+FFFD glyphs in texttrace
   known_bad: "Lohit-Devanagari (PDFium-produced) has no indic2unicode converter: text stays in visual order with control characters (िदनांक, पृ.\x18मांक)"
 - source: /Users/mukund/orgpedia/mahfin2/import/documents/20040812163004001.pdf
-  reason: legacy DVB-TTYogesh, unconverted in v1 (D-17)
-  known_bad: "DVB-TTYogesh text is left as 8-bit glyph codes (D-17, needs an input adapter)"
+  reason: legacy DVB-TTYogesh, left out (D-19)
+  known_bad: "DVB-TTYogesh text is left out as legacy regions (D-19); R leaves it as 8-bit glyph codes"
 - source: /Users/mukund/orgpedia/mahfin2/import/documents/201809121214439505.pdf
-  reason: legacy DVB-TTSurekhEN beside Sakal and Mangal (D-17)
-  known_bad: "DVB-TTSurekhEN text is left as 8-bit glyph codes (D-17, needs an input adapter)"
+  reason: legacy DVB-TTSurekhEN beside Sakal and Mangal (D-19)
+  known_bad: "DVB-TTSurekhEN is left out (D-19); it draws only spaces here"
 - source: /Users/mukund/orgpedia/mah2024/mahadmin2024/import/documents/202502101825563407.pdf
   reason: DVOT-SurekhMR; widest ink spill past rawdict boxes (SPIKES §3)
 - source: /Users/mukund/orgpedia/mahfin2/import/documents/202308171510373505.pdf

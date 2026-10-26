@@ -97,6 +97,33 @@ class Sakal(DVOTSurekh):
         'ADHA_KHA' : [176], 'DAWA' : [462], 'SHACA' : [473], \
     })
 
+    # THE GLYPHS THE WORD EXPORTS OF THE AGRICULTURE DEPARTMENT DRAW BESIDE
+    # THEM, each read off the page image of the word it stands in and each
+    # in SAKAL_MARATHI of tools/fix_tounicode.py as well. Their maps hand
+    # every one of these U+FFFD. The dead consonants of प्युरीफाईड्स,
+    # प्रोडक्ट्स and प्रॉडक्टस् and the half pha and ya of फ्लेक्झी and
+    # सहाय्य, the conjuncts of रीफ्रेशमेंट्स, ड्रोन, अन्नद्रव्य, भट्टड,
+    # विठ्ठलदास, शाश्वत, विश्लेषण, सल्ला, मोठ्या, मॉड्यूल्स, स्रोत and शास्त्र, the
+    # half tta of महत्त्वाकांक्षी, the da of दूरदृष्टी, matra_au with the
+    # anusvar of दौंड and the anusvar with the reph of सर्वंकष. Their
+    # quotes, glyphs 48, 49 and 666, are not here: an unrepaired map writes
+    # 48 and 49 as the digit keys 0 and 1, and a repaired one hands all three
+    # out as the quotes they are
+    GLYPHS = dict(GLYPHS, **{\
+        'ADHA_TTA'     : GLYPHS['ADHA_TTA'] + [185],                \
+        'ADHA_DDA'     : [187],  'ADHA_SA'  : GLYPHS['ADHA_SA'] + [238], \
+        'ADHA_PHA'     : [196],  'ADHA_YA'  : [200],                 \
+        'PHARA'        : [291],  'DDARA'    : [282], 'NANA'  : [400], \
+        'TTATTA'       : [442],  'TTHATTHA' : [445], 'SHAVA' : [474], \
+        'SHALA'        : [495],  'LALA'     : [498], 'TTHAYA': [504], \
+        'DDAYA'        : [505],  'SARA'     : [483], 'SATARA': [485], \
+        'ADHA_TATA'    : [451],  'DRI'      : [467],                 \
+        'MATRAAUBINDU' : [538],  'BINDURI'  : [522],                 \
+    })
+
+    # the anusvar with the reph on it is drawn and so repaired as ंर्
+    DRAWN = dict(DVOTSurekh.DRAWN, BINDURI = 'ंर्')
+
     # THE PRIVATE USE CHARACTER EVERY UNNAMED GLYPH IS HANDED, by glyph id,
     # in each of the two numberings this document is printed in - the one of
     # the 16 subsets of pages 4 to 19 first, then the one of the placed pdf

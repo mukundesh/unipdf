@@ -60,6 +60,8 @@ class Glyph:
     actual_text: bool = False  # /ActualText replacement text (UP-EX-7)
     actual_text_glyph_ids: list[int] | None = None  # the glyphs that text replaces
     unattributed: bool = False  # the converter dropped it (UP-AL-7)
+    # drawn under an ActualText that was not used (D-20): its text is its own
+    actual_text_ignored: bool = False
 
     @property
     def invisible(self) -> bool:
@@ -140,6 +142,21 @@ class Word:
     bold_evidence: list[str] = field(default_factory=list)
     italic: bool = False
     italic_evidence: list[str] = field(default_factory=list)
+    # the legacy region it is in (D-19): its text is then "" and clusters None
+    region: int | None = None
+
+
+@dataclass
+class LegacyRegion:
+    """consecutive words of a line set in legacy 8-bit fonts, left out of the
+    text (D-19): `text` holds PLACEHOLDER in their place"""
+
+    index: int
+    line: int
+    bbox: Box | None
+    fonts: list[str]
+    words: list[int]
+    raw_text: str
 
 
 @dataclass
@@ -166,6 +183,7 @@ class Page:
     words: list[Word] = field(default_factory=list)
     runs: list[Run] = field(default_factory=list)
     glyphs: list[Glyph] = field(default_factory=list)
+    legacy_regions: list[LegacyRegion] = field(default_factory=list)
 
     def text(self) -> str:
         by_block: dict[int, list[str]] = {b: [] for b in self.blocks}

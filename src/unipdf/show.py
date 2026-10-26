@@ -6,7 +6,7 @@ bold/italic in a hover title, since the browser shapes Devanagari and an
 image library may not. PNG output draws the boxes only.
 
 Colours: word blue, joined word green, bold word red, cluster orange,
-unattributed glyph magenta.
+unattributed glyph magenta, legacy region (D-19) grey.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import pymupdf
 from unipdf.model import Document, Page, Word
 
 WORD, JOINED, BOLD, CLUSTER, DROPPED = "#1f5fd1", "#1a9a3a", "#d12a1f", "#e08a00", "#c000c0"
+LEGACY = "#707070"
 
 
 def _word_colour(w: Word) -> str:
@@ -43,7 +44,13 @@ def _word_title(w: Word) -> str:
 
 def _boxes(page: Page, clusters: bool):
     """(bbox, colour, width, title) to draw"""
+    for r in page.legacy_regions:
+        if r.bbox is not None:
+            yield r.bbox, LEGACY, 1.5, (f"8bit:{r.index + 1}, {len(r.words)} words\n"
+                                        f"fonts: {', '.join(r.fonts)}\nraw: {r.raw_text!r}")
     for w in page.words:
+        if w.region is not None:
+            continue
         if w.bbox is not None:
             yield w.bbox, _word_colour(w), 1.0, _word_title(w)
         if clusters and w.clusters:
@@ -113,7 +120,8 @@ body {{ font-family: system-ui, sans-serif; margin: 16px; background: #f4f4f4; c
 <h1>{name}</h1>
 <p class="key"><span style="color:{WORD}">■ word</span><span style="color:{JOINED}">■ joined</span>
 <span style="color:{BOLD}">■ bold</span><span style="color:{CLUSTER}">■ cluster</span>
-<span style="color:{DROPPED}">■ unattributed glyph</span> · hover a box for its text</p>
+<span style="color:{DROPPED}">■ unattributed glyph</span>
+<span style="color:{LEGACY}">■ legacy 8-bit region</span> · hover a box for its text</p>
 {body}
 </body></html>
 """,

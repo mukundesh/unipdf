@@ -1,6 +1,6 @@
 # unipdf — Requirements
 
-Status: **Draft 6** (2026-10-16) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17); M1–M5 done, amendments marked *[M1]*–*[M5]*; OQ-9 decided (D-18).
+Status: **Draft 7** (2026-10-26) — M0 spikes done (SPIKES.md), amendments marked *[M0]*; OQ-8 decided (D-17, superseded by D-19); M1–M5 done, amendments marked *[M1]*–*[M5]*; OQ-9 decided (D-18); legacy 8-bit fonts left out (D-19), amendments marked *[D-19]*; ActualText that is not used (D-20) and indic2unicode changed upstream (D-21), from the mahagri2024 comparison.
 
 unipdf reads Hindi and Marathi text out of PDFs as correct Unicode **and** says
 where every word sits on the page and how it is set (size, bold, italic). It is
@@ -33,8 +33,11 @@ built by absorbing two existing libraries in this repository:
 | D-14 | Glyph and word boxes are `rawdict`'s character box (font ascender to descender). *[M0]* Confirmed by S3: ink never extends above or below it; horizontal spill ≤ ~0.12 em on 4 % of words; 3 of 1,297 stacked pairs overlap > 20 %. An ink-tight outline box is a later option, not v1 (needs UP-FN-6's span → xref mapping). | Owner: "try with one and see"; SPIKES §3 |
 | D-15 | *[M0]* `rawdict` characters are joined to `texttrace` entries by **sequence first, origin second** (SPIKES §1.2): 99.97 % joined on the spike corpus, every miss inside `/ActualText`. `/ActualText` is honoured as R does. | SPIKES §1 |
 | D-16 | *[M0]* The absorbed indic2unicode code is **not edited** beyond the import rewrite. Provenance runs BaseFont's passes as separate functions over (token, sources) pairs on unmodified converter instances, pinned to `to_unicode` by test. | SPIKES §2.1 |
-| D-17 | Legacy 8-bit fonts with no resolvable name (`DVB-TTSurekh`, `DVB-TTSurekhEN`, `DVB-TTYogesh`) stay unconverted in v1, matching R; `--font-map` is available. Later, a separate **input adapter** per legacy font maps PyMuPDF's characters to the bytes the converter expects (OQ-8). | Owner, 2026-10-16 |
+| D-17 | *Superseded by D-19.* Legacy 8-bit fonts with no resolvable name (`DVB-TTSurekh`, `DVB-TTSurekhEN`, `DVB-TTYogesh`) stay unconverted in v1, matching R; `--font-map` is available. Later, a separate **input adapter** per legacy font maps PyMuPDF's characters to the bytes the converter expects (OQ-8). | Owner, 2026-10-16 |
 | D-18 | *[M2]* `/ActualText` is already logical-order Unicode and **bypasses the converter**; the rest of its run is converted around it, in order (OQ-9 option b). A recorded departure from R like D-12: `Hindi-Google.pdf` gives `हिंदी` where R gives `हंिदी`. `--convert-actual-text` (`actual_text="convert"`) restores R's behaviour. | Owner, 2026-10-16 |
+| D-19 | **Legacy 8-bit Devanagari fonts are not read.** They are about 4,550 of 172,210 documents in mahfin2 (`tools/legacy_font_docs.py`), and Word's export loses some of their characters (OQ-8), so no input adapter is built. A font is legacy by its name (family patterns in `convert/legacy.py`: DV-TT/DVB-TT/DVBW-TT…, MG Shree/SHREE-DEV, AkrutiDev/AkrutiOffice, Kruti Dev, APS-DV, Chanakya, …), which wins over every resolution rule but a forced converter: also `DVBW-TTYogesh` and `TM-Chanakya`, which a converter reads by name, are left out. Their words keep box and raw text but get no text, and consecutive ones on a line form a legacy region; the text holds `⟦8bit:N⟧` in its place, `unipdf regions` lists the regions, an issue per font counts what was left out. A departure from R like D-12, on legacy fonts only; `legacy="keep"` (`--keep-legacy`) restores R's behaviour and the parity gate runs with it. The pattern list is family names, not per-font data, so D-1 holds. | Owner, 2026-10-26 |
+| D-20 | **An `/ActualText` is not used where it is known to be wrong**: when its text holds U+FFFD, or when its font's map was rebuilt by the repair in this document. Its glyphs are read instead, through the repaired map (`Glyph.actual_text_ignored`); glyphs the ActualText left out are kept and text it put over no glyph is dropped. Word's exports write `/ActualText <FEFFFFFD>` over conjuncts and shift ActualText by a character over SakalMarathi (बु�िमत्ता, घडविण््यससाठ). The two `rawdict` extractions are aligned over the whole page where they split it into different lines (such a page used to lose ActualText detection, `extraction_mismatch`, now gone). A departure from R like D-18, which still holds for fonts the repair does not touch (c006); `--convert-actual-text` restores R. The parity gate counts such runs as departures. Test: `tests/test_actual_text.py`, `tests/fixtures/`. | Owner, 2026-10-27 |
+| D-21 | **indic2unicode is changed upstream** (commit `da8994c`) where the mahagri2024 comparison showed it wrong, and absorbed again with the import rewrite only (D-16 holds; `tools/sync_upstream.sh`, `tools/check_upstream.sh --worktree`). `SAKAL_MARATHI` gains 24 glyphs read off page images and is held to its 713-glyph numbering (a 4245-glyph Sakal Marathi read व्यय as ौंयय); the sakal converter gains their tokens (स्र, स्त्र, फ्र, ड्र, श्ल, ल्ल, ठ्य, ंर्); a font's GSUB spelling no longer overrides the table when it is the same characters reordered (स्र्त); a font without a hand table is repaired from its own tables when they name every glyph its map holds (Mangal 886: ददनाांक), and a glyph with no map entry is filled from what the font says (CIDFont+F1 that is Mangal: Ûयायालयात); Nirmala UI 4923's eyelash ra (होर्णाया); Kokila is repaired and read by mangal_glyphs (षिभागाच्या). The golden text changed only where it was wrong (पयंत → पर्यंत, …). | Owner, 2026-10-27 |
 
 ## 2. The PDF engine (D-8): rationale and evidence
 
@@ -495,6 +498,9 @@ included.
   Common flags: `-p/--pages`, `-o/--output`, `--no-repair`, `--font`,
   `--font-map`, `--no-join` (UP-LY-5), `--rawdict-lines` (output lines =
   `rawdict` lines, no row merge; with `--no-join` this is R, UP-VF-4a), `-v`.
+  *[D-19]* `unipdf regions` — TSV/JSON: page, region, line, box, font, word
+  count, raw text of each legacy region; `words` gains a `region` column;
+  `--keep-legacy`.
   *[M5]* Also `--j2`, `--convert-actual-text`; `-o` and `-v` are accepted by
   every command. `words` and `glyphs` give TSV or `--format json` (an array,
   one record per line) and number pages, lines, words and glyphs from 1 as
@@ -504,11 +510,14 @@ included.
 - **UP-CLI-2** Missing conversions are summarised on stderr (as
   `read_pdf_cidpdf.py` does); exit status is non-zero only for real errors.
   *[M5]* Summarised: `no_converter`, `unconverted_char`, `converter_error`,
-  `repair_failed`, `extraction_mismatch`. `no_converter` is raised for a font
+  `repair_failed`, `extraction_mismatch` (*[D-20]* no longer raised). `no_converter` is raised for a font
   with no converter when ≥ 20 % of its non-space characters are Latin-1,
   private-use or control characters (the 8-bit legacy signature; on the
   corpus only c011's `DVB-TTYogesh` and `DVB-TTYogesh,Bold`), and names a
   converter whose name is inside the font's as a `--font-map` hint.
+  *[D-19]* `legacy_font` is summarised first, one line per legacy font (Word's
+  `+1` font object counted with its font). `no_converter` is left for fonts
+  whose name no legacy family knows, and gives no hint.
   Legacy fonts using only ASCII codes are indistinguishable from English and
   not reported. Exit status: 0 (also with warnings), 1 unreadable input
   (missing, not a PDF, encrypted) or a wrong option value, 2 usage.
@@ -518,7 +527,7 @@ included.
 ### 5.11 Issues and logging
 
 - **UP-IS-1** cidpdf's `IssueBag` model is kept; codes in v1 include
-  `no_text_layer`, `repair_failed`, `no_converter`, `unconverted_char`,
+  `no_text_layer`, `repair_failed`, `no_converter`, `legacy_font` *[D-19]*, `unconverted_char`,
   `converter_error`, `provenance_unavailable`, `joined_words`.
 - **UP-IS-2** Library code never prints; it logs (`logging`) and records issues.
 
@@ -659,7 +668,7 @@ joined with `\n`, blocks with `\n\n`. (This is `read_pdf.py` with its
 Resolved: OQ-1 → D-8, OQ-2 → D-9, OQ-3 → D-10, OQ-4 → D-11, OQ-5 → D-14,
 OQ-6 → D-12, OQ-7 → D-13, OQ-8 → D-17, OQ-9 → D-18.
 
-**OQ-8 → D-17** (decided 2026-10-16: option (a) for v1, input adapters later). *[M0]* Legacy 8-bit fonts named `DVB-TTSurekh`, `DVB-TTSurekhEN`,
+**OQ-8 → D-17** (decided 2026-10-16: option (a) for v1, input adapters later; superseded 2026-10-26 by D-19: no adapters, legacy fonts left out). *[M0]* Legacy 8-bit fonts named `DVB-TTSurekh`, `DVB-TTSurekhEN`,
 `DVB-TTYogesh` (and their `,Bold` / `+1` variants) occur in the corpus. No
 UP-FN-2 rule resolves them: FontConv's keys are `surekh`, `yogesh`,
 `DVBWTTYogeshNormal`. So R, and therefore unipdf under D-7, outputs their

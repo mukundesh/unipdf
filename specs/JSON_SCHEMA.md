@@ -18,6 +18,9 @@ Conventions:
 - Text: `text` is Unicode in logical order where a converter made it or the
   repair vouched for the map; `raw_text`/`raw` is what the PDF gives after
   ToUnicode repair, before conversion (D-13).
+- Legacy 8-bit fonts (D-19) are not read. Their words have `text` `""` and
+  a `region`; a line's `text` holds `⟦8bit:N⟧` in place of the region, N
+  being its `index` + 1 (the number `unipdf regions` gives it).
 
 ## Document
 
@@ -25,7 +28,7 @@ Conventions:
 |---|---|---|
 | `schema_version` | string | `"0.1"` |
 | `source` | object | `filename` (null when read from bytes), `sha256`, `size` (bytes) |
-| `options` | object | the `unipdf.open()` arguments in effect: `pages` (null = all), `repair`, `force`, `font_map`, `join`, `rawdict_lines`, `j2`, `actual_text` (`"bypass"`/`"convert"`), `row_tolerance` |
+| `options` | object | the `unipdf.open()` arguments in effect: `pages` (null = all), `repair`, `force`, `font_map`, `join`, `rawdict_lines`, `j2`, `actual_text` (`"bypass"`/`"convert"`), `row_tolerance`, `legacy` (`"skip"`/`"keep"`) |
 | `pages` | [Page] | the pages read, in order |
 | `fonts` | [Font] | one per font name met on those pages |
 | `issues` | [Issue] | what could not be done, in the order met |
@@ -43,6 +46,7 @@ Conventions:
 | `words` | [Word] | in reading order |
 | `runs` | [Run] | conversion units |
 | `glyphs` | [Glyph] | every glyph record of the page, in `rawdict` order |
+| `legacy_regions` | [LegacyRegion] | words in legacy 8-bit fonts, left out of the text (D-19) |
 
 ## Line
 
@@ -51,7 +55,7 @@ Conventions:
 | `index` | int | |
 | `block` | int | the `rawdict` block it belongs to |
 | `bbox` | box or null | union of its glyphs |
-| `text` | string | as `unipdf text` prints it |
+| `text` | string | as `unipdf text` prints it, with a placeholder for each legacy region |
 | `words` | [int] | its words |
 | `sources` | [[int, int]] | `(block, line)` of the `rawdict` lines merged into it |
 
@@ -61,7 +65,7 @@ Conventions:
 |---|---|---|
 | `index` | int | |
 | `line` | int | its line |
-| `text` | string | converted text |
+| `text` | string | converted text; `""` in a legacy region |
 | `raw_text` | string | text of its glyphs before conversion (D-13) |
 | `bbox` | box or null | union of the boxes of its glyphs, spaces left out |
 | `glyphs` | [int] | the glyphs its text came from, and its `unattributed` glyphs, in `rawdict` order |
@@ -73,10 +77,25 @@ Conventions:
 | `joined_from` | [string] or null | the parts the extraction split it into, when unipdf joined them (UP-LY-5) |
 | `join_rules` | [string] or null | rule of each removed space: `"J1"` (mark starts the next part), `"J2"` (narrow generated space) |
 | `unattributed` | [int] | glyphs the converter dropped, given to the nearest word (UP-AL-7): in `glyphs`, `raw_text` and `bbox`, not in `text` |
-| `clusters` | [Cluster] or null | aksharas with boxes; null when a run of it has only run-level provenance |
+| `clusters` | [Cluster] or null | aksharas with boxes; null when a run of it has only run-level provenance, or in a legacy region |
 | `font_runs` | [FontRun] | the parts of the word in one font (UP-AT-4) |
 | `bold`, `italic` | bool | bold if any font run is; italic likewise |
 | `bold_evidence`, `italic_evidence` | [string] | the evidence of the runs that decided (see Evidence) |
+| `region` | int or null | the legacy region it is in: a glyph of it, not a space, is in a legacy 8-bit font |
+
+## LegacyRegion
+
+Consecutive words of a line in legacy 8-bit fonts (D-19), for another tool to
+read from the page image.
+
+| field | type | meaning |
+|---|---|---|
+| `index` | int | per page; the text's placeholder is `⟦8bit:index+1⟧` |
+| `line` | int | its line |
+| `bbox` | box or null | union of its words' boxes |
+| `fonts` | [string] | its legacy fonts, in order of first use |
+| `words` | [int] | its words, consecutive |
+| `raw_text` | string | its words' `raw_text`, joined by spaces |
 
 ## Cluster
 
@@ -106,7 +125,7 @@ Conventions:
 | `block`, `line` | int | its `rawdict` line |
 | `font` | string | |
 | `converter` | string or null | indic2unicode converter used; null = text passed through |
-| `rule` | int or `"forced"` | resolution rule (UP-FN-2): 1 repaired, 2 reads unrepaired, 3 by name, 4 none |
+| `rule` | int or string | resolution rule (UP-FN-2): 1 repaired, 2 reads unrepaired, 3 by name, 4 none, `"forced"`, `"legacy"` (a legacy 8-bit font, left out: D-19) |
 | `raw` | string | the glyphs' text before conversion |
 | `text` | string | converted text |
 | `glyphs` | [int] | |
@@ -138,6 +157,7 @@ Conventions:
 | `actual_text` | bool | `/ActualText` replacement text standing for several glyphs (UP-EX-7) |
 | `actual_text_glyph_ids` | [int] or null | the glyph ids that text replaces |
 | `unattributed` | bool | the converter dropped it |
+| `actual_text_ignored` | bool | drawn under an `/ActualText` that was not used (D-20): its text is the glyph's own |
 
 ## Font
 
@@ -145,8 +165,8 @@ Conventions:
 |---|---|---|
 | `name` | string | as spans report it |
 | `converter` | string or null | |
-| `rule` | int or `"forced"` | as in Run |
-| `matched` | string or null | what the rule matched: repaired-as name, converter name, `"sound map"` |
+| `rule` | int or string | as in Run |
+| `matched` | string or null | what the rule matched: repaired-as name, converter name, `"sound map"`, legacy family (`dv-tt`, `shree-lipi`, `akruti`, `krutidev`, `aps`, `chanakya`, `other`) |
 | `repaired` | bool | its ToUnicode map was repaired in this document |
 | `repaired_as` | string or null | |
 | `programs` | [FontProgram] | the PDF font objects of this name |
@@ -202,10 +222,10 @@ Italic: `font_name_italic_keyword`, `pdf_descriptor_italic_angle_A`,
 |---|---|---|---|
 | `repair_failed` | warning | ToUnicode repair raised; the document is read unrepaired | |
 | `no_text_layer` | info | a page has no text | |
-| `no_converter` | warning | a font with no converter whose text looks like a legacy 8-bit encoding | `characters`, `legacy`, `suggest`, `pages` |
+| `legacy_font` | warning | words in a legacy 8-bit font were left out (D-19); Word's `+1` font object counts with its font | `family`, `words`, `regions`, `pages` |
+| `no_converter` | warning | a font with no converter, and a name no legacy family knows, whose text looks like a legacy 8-bit encoding: its text is passed through | `characters`, `legacy`, `pages` |
 | `unconverted_char` | warning | a converter had no token for a character; it is missing from `text` | `glyph`, `char` |
 | `converter_error` | warning | a converter raised on a run; the run's raw text stands | |
 | `provenance_unavailable` | info | a converter with no index map: boxes are per run | |
 | `unjoined_glyph` | info | a glyph could not be joined to `texttrace` (no glyph id) | `glyph` |
 | `joined_words` | info | the extraction split a word and unipdf joined it | `line`, `rule` |
-| `extraction_mismatch` | warning | the two `rawdict` extractions disagree on lines; ActualText is not detected on the page | |

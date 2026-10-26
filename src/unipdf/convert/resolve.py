@@ -22,7 +22,12 @@ name or None. The rules, in order:
    sound text they turn पश्चिम into प्चकम (a Word export with ActualText).
 4. None: the text is passed through unchanged.
 
-A caller can force a converter for every font or for named fonts (UP-FN-4).
+Before these, a legacy 8-bit font (convert/legacy.py) gets no converter and
+the rule `"legacy"`: its words are left out (D-19). `legacy="keep"` turns
+that off, for R's behaviour.
+
+A caller can force a converter for every font or for named fonts (UP-FN-4);
+that wins over everything, legacy fonts included.
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
+from unipdf.convert.legacy import KEEP, SKIP, legacy_family
 from unipdf.i2u.fix_tounicode import (
     FONT_CONVERTERS_BY_KEY,
     font_lookup_key,
@@ -45,6 +51,7 @@ RULE_READS_UNREPAIRED = 2
 RULE_NAME = 3
 RULE_NONE = 4
 RULE_FORCED = "forced"
+RULE_LEGACY = "legacy"
 
 # Resolution.matched of a rule-4 font whose map the repair found sound
 SOUND_MAP = "sound map"
@@ -74,7 +81,11 @@ class ConverterResolver:
         converter_names: Iterable[str],
         force: str | None = None,
         font_map: Mapping[str, str] | None = None,
+        legacy: str = SKIP,
     ):
+        if legacy not in (SKIP, KEEP):
+            raise ValueError(f"legacy must be {SKIP!r} or {KEEP!r}")
+        self.skip_legacy = legacy == SKIP
         names = set(converter_names)
         for forced in [force, *(font_map or {}).values()]:
             if forced is not None and forced not in names:
@@ -105,6 +116,10 @@ class ConverterResolver:
             return Resolution(self.font_map_by_key[key], RULE_FORCED, name)
         if self.force is not None:
             return Resolution(self.force, RULE_FORCED, None)
+        if self.skip_legacy:
+            family = legacy_family(name)
+            if family is not None:
+                return Resolution(None, RULE_LEGACY, family)
 
         # 1. repaired in this document, matched by exact name only: a bold
         # that was not repaired must not inherit its regular's repair

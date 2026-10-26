@@ -194,7 +194,7 @@ def sha256(path):
 
 def cmd_pick(args):
     logging.disable(logging.CRITICAL)
-    resolver = ConverterResolver(FontConv().converters)
+    resolver = ConverterResolver(FontConv().converters, legacy="keep")  # R's converters
     recs = []
     with open(args.cache) as f:
         for line in f:
