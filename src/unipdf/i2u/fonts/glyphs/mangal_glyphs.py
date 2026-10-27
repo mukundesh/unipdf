@@ -37,5 +37,32 @@ class MangalGlyphs(ArialUniGlyphs):
        Unicode MS draws ीर्: the syllable keeps its own sign, so कुर्रे comes
        out as कुर्रे and not as कुर्र, and बोर्डों as बोर्डों and not as
        बोर्ड.
+
+       Mangal and Kokila draw some consonants that have no glyph of their
+       own as the half form and the bar of matra aa: the भ of उद्भवत is the
+       half bha and matra aa, which a repaired map hands out as भ्ा. No
+       unicode text has a virama followed by a vowel sign, so a half
+       consonant followed by matra aa is always that consonant whole - also
+       across the space an extractor puts between the two when the bar is
+       set apart from the half form (उद्भ् ावत), since no word starts with
+       matra aa.
+
+       They draw matra o the same way, as matra e and the bar (सोलापूर comes
+       out as सेालापूर, मोह as माेह), and matra au and the candra o of हॉटेल
+       likewise. No unicode text has two vowel signs in a row either, so the
+       two are the one matra they draw, in either order.
     '''
-    pass
+    def __init__(self):
+        ArialUniGlyphs.__init__(self)
+        tokens = set()
+        for obj in self.langobjs:
+            tokens.update(obj.get_tokens())
+        for half in sorted(t for t in tokens if t.startswith('ADHA_')):
+            whole = half[len('ADHA_'):]
+            if whole in tokens:
+                self.composeTokens[(half, 'MATRA_AA')] = whole
+                self.composeTokens[(half, 'SPACE', 'MATRA_AA')] = whole
+        for sign, matra in (('MATRA_E', 'MATRA_O'), ('MATRA_AI', 'MATRA_AU'), \
+                            ('CHANDRA', 'MATRA_CHANDRA_O')):
+            self.composeTokens[(sign, 'MATRA_AA')] = matra
+            self.composeTokens[('MATRA_AA', sign)] = matra

@@ -25,13 +25,13 @@ Pin a release tag:
 
 ```toml
 # pyproject.toml
-dependencies = ["unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.1"]
+dependencies = ["unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.2"]
 ```
 
 ```sh
-uv add "unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.1"
+uv add "unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.2"
 # or
-pip install "unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.1"
+pip install "unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.2"
 ```
 
 Python 3.12 or later. unipdf pins PyMuPDF to exactly 1.28.2: how glyphs and

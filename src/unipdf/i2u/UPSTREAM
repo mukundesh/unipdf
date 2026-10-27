@@ -1,6 +1,7 @@
-Absorbed from indic2unicode (Try/indic2unicode/indic2unicode), commit da8994c
-("Fixing Sakal Marathi, Mangal, Nirmala UI and Kokila for Word exports
-(marathi)", REQUIREMENTS D-21), via git archive. First absorbed at 2cf31cf.
+Absorbed from indic2unicode (Try/indic2unicode/indic2unicode), commit ff7232f
+("Fixing Mangal for the Maharashtra legislature's Word and Distiller exports
+(marathi)", REQUIREMENTS D-22), via git archive. First absorbed at 2cf31cf,
+then da8994c (D-21).
 
 Copied: fontconv.py __init__.py fonts/ langs/ LICENSE COPYING README BUGS,
 tools/fix_tounicode.py -> fix_tounicode.py.

@@ -6,7 +6,7 @@ attributes. The text conversion is
 its imports rewritten only (`src/unipdf/i2u/`). Geometry comes from PyMuPDF
 glyphs.
 
-Status: **v0.2.1**. **Using it from code: [`docs/USAGE.md`](docs/USAGE.md)** -
+Status: **v0.2.2**. **Using it from code: [`docs/USAGE.md`](docs/USAGE.md)** -
 the API, the output, coordinates, recipes, errors, logging, a full JSON
 example. Every JSON field: [`specs/JSON_SCHEMA.md`](specs/JSON_SCHEMA.md).
 Requirements and plan in `specs/`.
@@ -23,7 +23,7 @@ uv run unipdf --help
 As a dependency of another project, pinned to a release tag:
 
 ```toml
-dependencies = ["unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.1"]
+dependencies = ["unipdf @ git+https://github.com/mukundesh/unipdf@v0.2.2"]
 ```
 
 PyMuPDF is pinned to 1.28.2, the version the glyph join and boxes were
@@ -219,7 +219,7 @@ hand-labelled words in `tests/hand/`.
 |---|---|
 | `docs/` | `USAGE.md`, the guide for code that calls unipdf |
 | `specs/` | REQUIREMENTS, IMPLEMENTATION_PLAN, SPIKES, JSON_SCHEMA |
-| `src/unipdf/i2u/` | indic2unicode at `da8994c` (D-21), imports rewritten only (see `UPSTREAM`) |
+| `src/unipdf/i2u/` | indic2unicode at `ff7232f` (D-21, D-22), imports rewritten only (see `UPSTREAM`) |
 | `src/unipdf/pipeline.py` | `unipdf.open()`: repair → glyphs → runs → rows → words |
 | `src/unipdf/model.py`, `issues.py` | Document / Page / Line / Word / Run / Glyph / Font, issues |
 | `src/unipdf/pdf/` | repair; glyph records (D-15, D-18); font records |
@@ -229,7 +229,7 @@ hand-labelled words in `tests/hand/`.
 | `src/unipdf/cli.py`, `show.py` | command line, page overlays |
 | `src/unipdf/reference.py` | the reference pipeline, the parity oracle |
 | `tests/` | tests; `i2u/` indic2unicode's testdata, `corpus/` parity corpus, `hand/` hand labels |
-| `tools/` | corpus and golden builders, `check_upstream.sh` / `sync_upstream.sh`, `legacy_font_docs.py`, `compare_docint.py` (words against another pipeline's `doc.json`), `retired/` old scripts |
+| `tools/` | corpus and golden builders, `check_upstream.sh` / `sync_upstream.sh`, `legacy_font_docs.py`, `compare_docint.py` (words against another pipeline's `doc.json`), `derive_glyph_table.py` (a glyph table for fix_tounicode from fonts that keep their GSUB), `retired/` old scripts |
 | `spikes/m0/` | M0 spike scripts |
 
 ## License

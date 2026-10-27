@@ -1,6 +1,6 @@
 [project]
 name = "unipdf"
-version = "0.2.1"
+version = "0.2.2"
 description = "Hindi and Marathi text from PDFs as Unicode, with word boxes and font attributes"
 readme = "README.md"
 authors = [

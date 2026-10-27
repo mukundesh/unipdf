@@ -7,9 +7,11 @@ runs (sakal). Conversion goes through the tracked path (provenance.py), whose
 text is pinned to `to_unicode`.
 
 ActualText (OQ-9 option b, D-18): with `actual_text="bypass"` (default),
-glyph records holding ActualText are already logical-order Unicode and are
-not given to the converter; the rest of the run is converted around them in
-order. `actual_text="convert"` is R's behaviour.
+glyph records holding ActualText over a repaired font are already
+logical-order Unicode and are not given to the converter; the rest of the
+run is converted around them in order. A converter chosen by font name or
+forced reads ActualText with the rest of its run, as R does, since it was
+written against that text. `actual_text="convert"` is R's behaviour.
 """
 
 from __future__ import annotations
@@ -195,7 +197,13 @@ def convert_line(
         if res.converter is None:
             run.pieces = [(g.text, [g.index]) for g in run_glyphs]
         else:
-            for is_at, seg in _segments(run_glyphs, actual_text == BYPASS):
+            # ActualText bypasses a converter of a repaired font (D-18). A
+            # converter chosen by font name or forced was written against
+            # its font's text as extractors give it, ActualText and all, and
+            # reads that: FourCMRAbhishek's ActualText stands for part of
+            # what a glyph's map says, and bypassed it doubles (विधाानसभाा)
+            bypass = actual_text == BYPASS and res.rule == RULE_REPAIRED
+            for is_at, seg in _segments(run_glyphs, bypass):
                 if is_at:
                     run.pieces.extend((g.text, [g.index]) for g in seg)
                 else:

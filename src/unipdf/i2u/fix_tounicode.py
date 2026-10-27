@@ -2162,6 +2162,132 @@ class GlyphNumberings(dict):
 # entry is what puts the font on the list of the ones that are repaired at all
 FREE_SERIF = {}
 
+# The Mangal of 885 glyphs, the version the legislature's documents carry.
+# Word carries it with its GSUB, and fix_font spells every glyph of it out of
+# that; Acrobat Distiller, printing through PScript5, carries the very same
+# glyphs as bare outlines - no cmap, no post, no GSUB - so वस्त्रोद्योग comes
+# out of it as वèत्रोɮयोग, glyph 232 being the half sa and 622 the half da.
+# This table is what 4126 Word subsets of it spell, regular and bold alike,
+# which number their glyphs the same: every one of those subsets agreed on
+# every glyph but 226, which the GSUB makes both out of ra and a virama and
+# out of the eyelash ra and so spells as both - it is the eyelash ra of
+# होणाऱ्या, drawn where it is written, and the reph it would be read as
+# moves. Made with unipdf's tools/derive_glyph_table.py Mangal 885
+MANGAL_885_GLYPH_COUNT = 885
+MANGAL_885 = { \
+    3: ' ', 4: '!', 5: '"', 6: '#', 7: '%', 8: '&', 9: "'", 10: '(', 11: ')', \
+    12: '*', 13: '+', 14: ',', 15: '-', 16: '.', 17: '/', 18: '0', 19: '1', \
+    20: '2', 21: '3', 22: '4', 23: '5', 24: '6', 25: '7', 26: '8', 27: '9', \
+    28: ':', 29: ';', 31: '=', 33: '?', 34: '@', 35: '[', 36: '\\', 37: ']', \
+    39: '_', 40: '{', 41: '|', 42: '}', 45: '–', 46: '—', 47: '‘', 48: '’', \
+    64: '।', 65: '॥', 66: '०', 67: '१', 68: '२', 69: '३', 70: '४', 71: '५', \
+    72: '६', 73: '७', 74: '८', 75: '९', 80: '़', 81: '्', 85: 'ँ', 89: '्र', \
+    91: 'र्', 92: 'अ', 93: 'आ', 94: 'इ', 95: 'ई', 96: 'उ', 97: 'ऊ', 98: 'ऋ', \
+    100: 'ऍ', 101: 'ऎ', 102: 'ए', 103: 'ऐ', 104: 'ऑ', 105: 'ऒ', 106: 'ओ', \
+    107: 'औ', 128: 'क', 129: 'ख', 130: 'ग', 131: 'घ', 132: 'ङ', 133: 'च', \
+    134: 'छ', 135: 'ज', 136: 'झ', 137: 'ञ', 138: 'ट', 139: 'ठ', 140: 'ड', \
+    141: 'ढ', 142: 'ण', 143: 'त', 144: 'थ', 145: 'द', 146: 'ध', 147: 'न', \
+    148: 'प', 149: 'फ', 150: 'ब', 151: 'भ', 152: 'म', 153: 'य', 154: 'र', \
+    155: 'ल', 156: 'ळ', 157: 'व', 158: 'श', 159: 'ष', 160: 'स', 161: 'ह', \
+    162: 'क्ष', 163: 'ज्ञ', 164: 'क़', 165: 'ख़', 166: 'ग़', 167: 'घ़', \
+    168: 'ङ़', 169: 'च़', 170: 'छ़', 171: 'ज़', 172: 'झ़', 173: 'ञ़', \
+    174: 'ट़', 175: 'ठ़', 176: 'ड़', 177: 'ढ़', 178: 'ण़', 179: 'त़', \
+    180: 'थ़', 181: 'द़', 182: 'ध़', 183: 'ऩ', 184: 'प़', 185: 'फ़', \
+    186: 'ब़', 187: 'भ़', 188: 'म़', 189: 'य़', 190: 'ऱ', 191: 'ल़', \
+    192: 'ऴ', 193: 'व़', 194: 'श़', 195: 'ष़', 196: 'स़', 197: 'ह़', \
+    200: 'क्', 201: 'ख्', 202: 'ग्', 203: 'घ्', 204: 'ङ्', 205: 'च्', \
+    206: 'छ्', 207: 'ज्', 208: 'झ्', 209: 'ञ्', 210: 'ट्', 211: 'ठ्', \
+    212: 'ड्', 213: 'ढ्', 214: 'ण्', 215: 'त्', 216: 'थ्', 217: 'द्', \
+    218: 'ध्', 219: 'न्', 220: 'प्', 221: 'फ्', 222: 'ब्', 223: 'भ्', \
+    224: 'म्', 225: 'य्', 226: 'ऱ्', 227: 'ल्', 228: 'ळ्', 229: 'व्', \
+    230: 'श्', 231: 'ष्', 232: 'स्', 233: 'ह्', 234: 'क्ष्', 235: 'ज्ञ्', \
+    236: 'क़्', 237: 'ख़्', 238: 'ग़्', 239: 'घ़्', 240: 'ङ़्', 241: 'च़्', \
+    242: 'छ़्', 243: 'ज़्', 244: 'झ़्', 245: 'ञ़्', 246: 'ट़्', 247: 'ठ़्', \
+    248: 'ड़्', 249: 'ढ़्', 250: 'ण़्', 251: 'त़्', 252: 'थ़्', 253: 'द़्', \
+    254: 'ध़्', 255: 'ऩ्', 256: 'प़्', 257: 'फ़्', 258: 'ब़्', 259: 'भ़्', \
+    260: 'म़्', 261: 'य़्', 262: 'ऱ्', 263: 'ल़्', 264: 'ऴ्', 265: 'व़्', \
+    266: 'श़्', 267: 'ष़्', 268: 'स़्', 269: 'ह़्', 272: 'क्र', 273: 'ख्र', \
+    274: 'ग्र', 275: 'घ्र', 276: 'ङ्र', 277: 'च्र', 278: 'छ्र', 279: 'ज्र', \
+    280: 'झ्र', 281: 'ञ्र', 282: 'ट्र', 283: 'ठ्र', 284: 'ड्र', 285: 'ढ्र', \
+    286: 'ण्र', 287: 'त्र', 288: 'थ्र', 289: 'द्र', 290: 'ध्र', 291: 'न्र', \
+    292: 'प्र', 293: 'फ्र', 294: 'ब्र', 295: 'भ्र', 296: 'म्र', 297: 'य्र', \
+    299: 'ल्र', 300: 'ळ्र', 301: 'व्र', 302: 'श्र', 303: 'ष्र', 304: 'स्र', \
+    305: 'ह्र', 306: 'क्ष्र', 307: 'ज्ञ्र', 308: 'क़्र', 309: 'ख़्र', \
+    310: 'ग़्र', 311: 'घ़्र', 312: 'ङ़्र', 313: 'च़्र', 314: 'छ़्र', \
+    315: 'ज़्र', 316: 'झ़्र', 317: 'ञ़्र', 318: 'ट़्र', 319: 'ठ़्र', \
+    320: 'ड़्र', 321: 'ढ़्र', 322: 'ण़्र', 323: 'त़्र', 324: 'थ़्र', \
+    325: 'द़्र', 326: 'ध़्र', 327: 'ऩ्र', 328: 'प़्र', 329: 'फ़्र', \
+    330: 'ब़्र', 331: 'भ़्र', 332: 'म़्र', 333: 'य़्र', 335: 'ल़्र', \
+    336: 'ऴ्र', 337: 'व़्र', 338: 'श़्र', 339: 'ष़्र', 340: 'स़्र', \
+    341: 'ह़्र', 344: 'क्र्', 345: 'ख्र्', 346: 'ग्र्', 347: 'घ्र्', \
+    348: 'ङ्र्', 349: 'च्र्', 350: 'छ्र्', 351: 'ज्र्', 352: 'झ्र्', \
+    353: 'ञ्र्', 354: 'ट्र्', 355: 'ठ्र्', 356: 'ड्र्', 357: 'ढ्र्', \
+    358: 'ण्र्', 359: 'त्र्', 360: 'थ्र्', 361: 'द्र्', 362: 'ध्र्', \
+    363: 'न्र्', 364: 'प्र्', 365: 'फ्र्', 366: 'ब्र्', 367: 'भ्र्', \
+    368: 'म्र्', 369: 'य्र्', 371: 'ल्र्', 372: 'ळ्र्', 373: 'व्र्', \
+    374: 'श्र्', 375: 'ष्र्', 376: 'स्र्', 377: 'ह्र्', 378: 'क्ष्र्', \
+    379: 'ज्ञ्र्', 380: 'क़्र्', 381: 'ख़्र्', 382: 'ग़्र्', 383: 'घ़्र्', \
+    384: 'ङ़्र्', 385: 'च़्र्', 386: 'छ़्र्', 387: 'ज़्र्', 388: 'झ़्र्', \
+    389: 'ञ़्र्', 390: 'ट़्र्', 391: 'ठ़्र्', 392: 'ड़्र्', 393: 'ढ़्र्', \
+    394: 'ण़्र्', 395: 'त़्र्', 396: 'थ़्र्', 397: 'द़्र्', 398: 'ध़्र्', \
+    399: 'ऩ्र्', 400: 'प़्र्', 401: 'फ़्र्', 402: 'ब़्र्', 403: 'भ़्र्', \
+    404: 'म़्र्', 405: 'य़्र्', 407: 'ल़्र्', 408: 'ऴ्र्', 409: 'व़्र्', \
+    410: 'श़्र्', 411: 'ष़्र्', 412: 'स़्र्', 413: 'ह़्र्', 416: 'क्त', \
+    417: 'ख्न', 418: 'ङ्म', 419: 'त्त', 420: 'त्न', 421: 'द्ग', 422: 'द्घ', \
+    423: 'द्द', 424: 'द्ध', 425: 'द्न', 426: 'द्ब', 427: 'द्भ', 428: 'द्म', \
+    429: 'द्य', 430: 'द्व', 431: 'प्त', 432: 'श्न', 433: 'श्च', 434: 'श्ल', \
+    435: 'श्व', 436: 'ष्ट', 437: 'ष्ठ', 438: 'ष्ट्र', 439: 'ष्ठ्र', \
+    440: 'स्त्र', 441: 'ह्न', 442: 'ह्म', 443: 'ह्य', 444: 'ह्ण', 445: 'ह्ल', \
+    446: 'ह्व', 448: 'ख्न्', 450: 'त्त्', 451: 'त्न्', 452: 'द्म्', \
+    453: 'प्त्', 454: 'श्न्', 455: 'श्च्', 456: 'श्ल्', 457: 'श्व्', \
+    458: 'स्त्र्', 464: 'ि', 465: 'ि', 466: 'ि', 467: 'ि', 468: 'ि', \
+    469: 'ु', 471: 'ू', 473: 'ृ', 475: 'ॄ', 482: 'ङ्रु', 483: 'ङ्रू', \
+    484: 'ङ्रृ', 485: 'ङ्रॄ', 486: 'छ्रु', 487: 'छ्रू', 488: 'छ्रृ', \
+    489: 'छ्रॄ', 490: 'ट्रु', 491: 'ट्रू', 492: 'ट्रृ', 493: 'ट्रॄ', \
+    494: 'ठ्रु', 495: 'ठ्रू', 496: 'ठ्रृ', 497: 'ठ्रॄ', 498: 'ड्रु', \
+    499: 'ड्रू', 500: 'ड्रृ', 501: 'ड्रॄ', 502: 'ढ्रु', 503: 'ढ्रू', \
+    504: 'ढ्रृ', 505: 'ढ्रॄ', 506: 'दृ', 509: 'रु', 510: 'रू', 511: 'हृ', \
+    512: 'हॄ', 513: 'ङ़्रु', 514: 'ङ़्रू', 515: 'ङ़्रृ', 516: 'ङ़्रॄ', \
+    517: 'छ़्रु', 518: 'छ़्रू', 519: 'छ़्रृ', 520: 'छ़्रॄ', 521: 'ट़्रु', \
+    522: 'ट़्रू', 523: 'ट़्रृ', 524: 'ट़्रॄ', 525: 'ठ़्रु', 526: 'ठ़्रू', \
+    527: 'ठ़्रृ', 528: 'ठ़्रॄ', 529: 'ड़्रु', 530: 'ड़्रू', 531: 'ड़्रृ', \
+    532: 'ड़्रॄ', 533: 'ढ़्रु', 534: 'ढ़्रू', 535: 'ढ़्रृ', 536: 'ढ़्रॄ', \
+    537: 'ष्ट्रु', 538: 'ष्ट्रू', 539: 'ष्ट्रृ', 540: 'ष्ट्रॄ', \
+    541: 'ष्ठ्रु', 542: 'ष्ठ्रू', 543: 'ष्ठ्रृ', 544: 'ष्ठ्रॄ', 545: 'ा', \
+    546: 'ी', 547: 'ी', 548: 'ी', 551: 'ी', 552: 'ॉ', 553: 'ॊ', 554: 'ो', \
+    555: 'ौ', 556: 'ः', 557: 'ॅ', 558: 'ॆ', 559: 'े', 560: 'ै', 561: 'ँ', \
+    562: 'ं', 563: '॑', 566: 'ेर्', 567: 'ैर्', 568: 'ीर्', 569: 'ीर्', \
+    570: 'ीर्', 573: 'ीर्', 574: 'ोर्', 575: 'ौर्', 576: 'ॆर्', 577: 'ॊर्', \
+    578: 'ईँ', 579: 'ईं', 580: 'ेँ', 581: 'ें', 582: 'ैँ', 583: 'ैं', \
+    584: 'ोँ', 585: 'ों', 586: 'ौँ', 587: 'ौं', 588: 'र्ँ', 589: 'र्ं', \
+    590: 'ेर्ँ', 591: 'ेर्ं', 592: 'ैर्ँ', 593: 'ैर्ं', 594: 'ीर्ँ', \
+    595: 'ीर्ँ', 596: 'ीर्ँ', 599: 'ीर्ँ', 600: 'ीर्ं', 601: 'ीर्ं', \
+    602: 'ीर्ं', 605: 'ीर्ं', 606: 'ोर्ँ', 607: 'ोर्ं', 608: 'ौर्ँ', \
+    609: 'ौर्ं', 610: 'ॆर्ँ', 611: 'ॆर्ं', 612: 'ॊर्ँ', 613: 'ॊर्ं', \
+    614: 'ष्टँ', 615: 'ष्ठँ', 616: 'ङ्', 617: 'छ्', 618: 'ट्', 619: 'ठ्', \
+    620: 'ड्', 621: 'ढ्', 622: 'द्', 623: 'ह्', 624: 'ङ़्', 625: 'छ़्', \
+    626: 'ट़्', 627: 'ठ़्', 628: 'ड़्', 629: 'ढ़्', 630: 'द़्', 631: 'ह़्', \
+    632: 'ङ्र्', 633: 'छ्र्', 634: 'ट्र्', 635: 'ठ्र्', 636: 'ड्र्', \
+    637: 'ढ्र्', 638: 'द्र्', 639: 'ह्र्', 640: 'ङ़्र्', 641: 'छ़्र्', \
+    642: 'ट़्र्', 643: 'ठ़्र्', 644: 'ड़्र्', 645: 'ढ़्र्', 646: 'द़्र्', \
+    647: 'ह़्र्', 648: 'द्ग्', 649: 'द्घ्', 650: 'द्द्', 651: 'द्ध्', \
+    652: 'द्न्', 653: 'द्ब्', 654: 'द्भ्', 655: 'द्म्', 656: 'द्य्', \
+    657: 'द्व्', 658: 'ष्ट्', 659: 'ष्ठ्', 660: 'ष्ट्र्', 661: 'ष्ठ्र्', \
+    662: 'ह्न्', 663: 'ह्ण्', 664: 'ह्ल्', 665: 'ह्व्', 668: '◌', 671: 'ॅँ', \
+    672: 'ॅं', 692: '$', 693: 'A', 694: 'B', 695: 'C', 696: 'D', 697: 'E', \
+    698: 'F', 699: 'G', 700: 'H', 701: 'I', 702: 'J', 703: 'K', 704: 'L', \
+    705: 'M', 706: 'N', 707: 'O', 708: 'P', 709: 'Q', 710: 'R', 711: 'S', \
+    712: 'T', 713: 'U', 714: 'V', 715: 'W', 716: 'X', 717: 'Y', 718: 'Z', \
+    719: '`', 720: 'a', 721: 'b', 722: 'c', 723: 'd', 724: 'e', 725: 'f', \
+    726: 'g', 727: 'h', 728: 'i', 729: 'j', 730: 'k', 731: 'l', 732: 'm', \
+    733: 'n', 734: 'o', 735: 'p', 736: 'q', 737: 'r', 738: 's', 739: 't', \
+    740: 'u', 741: 'v', 742: 'w', 743: 'x', 744: 'y', 745: 'z', 758: '“', \
+    759: '”', 760: '•', 775: '¨', 779: '\xad', 782: '°', 786: '´', 787: 'µ', \
+    790: '¸', 791: '¹', 794: '¼', 795: '½', 796: '¾', 825: 'Ü', 860: '¬', \
+    862: 'ॽ', 864: 'ट्ट', 865: 'ट्ठ', 866: 'ठ्ठ', 871: 'ि', 872: 'ि', \
+    873: 'ि', 874: 'ि', 875: 'ि', 876: 'ि', 879: 'ि', 880: 'ि', 883: 'ॲ', \
+}
+
 # Kokila, the devanagari of Microsoft that Word carries the way it carries
 # Mangal, and whose map it breaks the same way: the glyphs of a run paired
 # with its characters one by one, the pairing slipping on the glyphs shaping
@@ -2420,7 +2546,8 @@ BROKEN_FONTS = {'Arial Unicode MS'  : ARIAL_UNICODE_MS,   \
                 # no table here and are repaired by what their glyphs
                 # draw instead, see MANGAL_OUTLINES \
                 'Mangal'            : GlyphNumberings({ \
-                    MANGAL_GLYPH_COUNT: MANGAL}), \
+                    MANGAL_GLYPH_COUNT: MANGAL, \
+                    MANGAL_885_GLYPH_COUNT: MANGAL_885}), \
                 # the weights of the unicode Nudi, which a pdf names
                 # apart and which share one glyph order, see
                 # NUDI_UNI_GLYPH_COUNT \
@@ -2685,6 +2812,9 @@ NUKTA = '\u093c'
 FORM_MARKS = {ord(mark): None \
               for mark in (kannada.ARKAVATTU_MARK, odiya.REPH_MARK, \
                            telugu.PREBASE_RA_MARK)}
+
+# the rakar, the below base form of ra, as substituted_string spells it
+RAKAR = HALANT + '\u0930'
 
 def virama_of(ustr):
     '''the virama of the script that a glyph's characters are in, the
@@ -3050,6 +3180,14 @@ class ToUnicodeFixer:
                 return virama_of(parts[0]) + parts[0]
         elif tags & HALF_FORM_FEATURES and len(parts) == 1:
             return parts[0] + virama_of(parts[0])
+        elif len(parts) == 2 and parts[1] == RAKAR and \
+                parts[0][-1:] == HALANT and len(parts[0]) > 1:
+            # a half form and the rakar under it, which Mangal's vatu makes
+            # into the half form of the ra conjunct - the त्र् of
+            # त्र्यंबकेश्वर. Joined as they are the two would spell त््र, two
+            # viramas and the ra behind them; unicode writes the ra of the
+            # conjunct and then the virama that makes it half
+            return parts[0][:-1] + RAKAR + HALANT
         elif tags & AKHAND_FEATURES and len(parts) > 2 and \
                 parts[-1] in VIRAMA_CHARS:
             # a cluster that a telugu or kannada shaper has already
@@ -3398,9 +3536,17 @@ class ToUnicodeFixer:
         # department's Word exports is such a subset, whose map hands the
         # matra i of दिनांक the da it is drawn in front of (दद, ददनाांक) and
         # whose GSUB says that glyph 465 is the matra i. Its bold, which
-        # names 19 of the glyphs it draws nowhere, is still left as it is
+        # names 19 of the glyphs it draws nowhere, is still left as it is.
+        # Two glyphs do not count against it: .notdef, which draws no letter
+        # whatever the map hands it (Word hands it the ₹ that Mangal has no
+        # glyph for), and a glyph or two out of a hundred that the font
+        # cannot spell because the subset keeps none of its parts - the ज्ञ
+        # of a document that draws no ञ of its own. Those keep their own
+        # reading, which is right as often as not; the Mangal of 885 glyphs
+        # of the legislature's Word exports names 183 of the 185 glyphs of
+        # its map that way and is wrong about 37 of them (आेि for आहे)
         if outlinefixes and not glyphfixes and not self.has_map_holes(table) \
-                and not all(code in strings for code in table):
+                and not self.names_nearly_all(table, strings):
             self.logger.debug('Font %d (%s) has no hole in its map, so it ' \
                               'is not the one the outline table was read ' \
                               'for and is left as it is', xref, fontname)
@@ -3658,6 +3804,12 @@ class ToUnicodeFixer:
             self.logger.debug('Font %d glyph %d: no entry -> %r', \
                               xref, code, correct)
         return num
+
+    def names_nearly_all(self, table, strings):
+        '''whether what a font says about its glyphs covers its map but for
+           .notdef and at most one glyph in fifty, see fix_font'''
+        unnamed = [code for code in table if code != 0 and code not in strings]
+        return len(unnamed) <= len(table) // 50
 
     def add_named_glyphs(self, doc, xref, fixed, strings):
         '''put back the glyphs the map has no entry for that the font itself

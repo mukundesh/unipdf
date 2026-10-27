@@ -8,7 +8,7 @@
     unipdf.convert("chanakya", text)  # text that is not in a PDF
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 from unipdf.convert.strings import convert, convert_with_provenance, converter_names
 from unipdf.pipeline import PasswordRequired, read_document

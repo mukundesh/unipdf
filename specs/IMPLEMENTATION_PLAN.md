@@ -290,6 +290,15 @@ by the extension), now `pymupdf.FileDataError`; on a rotated page boxes
 were in the unrotated page while `width`/`height` were the rotated ones,
 now all in the displayed page.
 
+**v0.2.2 — the legislature's Mangal (D-22, 2026-10-27).** A survey of the
+1,946 PDFs of mahmls `flow/readPDF_` (every Devanagari word checked for
+impossible spellings, per font) found Mangal, two thirds of their words,
+broken in one word of six. Fixed in indic2unicode and unipdf (D-22);
+regression cases in indic2unicode's `testdata/mangal_glyphs`. Left: the
+FourCMRAbhishek converter on InDesign exports (4-9%), an unrepaired
+DVOT-Surekh (two documents the pipeline skips), a Mangal-Bold with
+private-use codes (37 documents, 10%).
+
 
 1. `unipdf words` (TSV/JSON), `glyphs`, `json`, `fonts` (UP-CLI-1);
    stderr summary of missing conversions (UP-CLI-2); exit codes.
